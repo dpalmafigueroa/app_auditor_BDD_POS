@@ -1,14 +1,24 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.1 para Streamlit (Añade Geo El Salvador)
+# Versión Atlantia 2.1 Final (Incluye botones de descarga)
 
 import streamlit as st
 import pandas as pd
 import locale
 import io # Para leer los archivos subidos
 import numpy as np # Para manejar tipos numéricos
+from io import BytesIO # Para crear Excel en memoria
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Validador Atlantia")
+
+# --- Función para convertir DataFrame a Excel en memoria ---
+def to_excel(df):
+    output = BytesIO()
+    # Usa 'xlsxwriter' o 'openpyxl'. openpyxl es más común con pandas.
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Reglas')
+    processed_data = output.getvalue()
+    return processed_data
 
 # --- CSS PERSONALIZADO ---
 # (Mismo CSS de la versión anterior)
@@ -209,6 +219,7 @@ atlantia_css = """
     .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; border-color: rgba(13, 71, 161, 0.3); }
     .status-info .df-style th { background-color: rgba(13, 71, 161, 0.1); }
 
+
     /* Resumen Lista */
     .summary-list ul { list-style-type: none; padding-left: 0; }
     .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); }
@@ -247,14 +258,7 @@ CLASIFICACIONES_POR_PAIS = {
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
     'Guatemala': {'Metro': ['Guatemala'],'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa'],'Occidente': ['Chimaltenango', 'Huehuetenango', 'Quetzaltenango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],'Sur Occidente': ['Escuintla', 'Retalhuleu', 'Suchitepequez'],'Sur Oriente': ['Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula']},
-    # [NUEVO] El Salvador
-    'El Salvador': {
-        'AMSS': ['San Salvador'],
-        'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],
-        'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],
-        'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']
-    },
-    # Mantener países sin geo explícita para el selector, pero vacíos
+    'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
 # Umbrales numéricos
@@ -275,9 +279,36 @@ THRESHOLDS_POR_PAIS = {
 paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys())) # Ordenar alfabéticamente
 
 # --- SELECCIÓN DE PAÍS Y CARGA DE ARCHIVOS ---
-# ... (igual que antes) ...
 col_pais, col_vacia = st.columns([1, 2])
-with col_pais: pais_seleccionado_display = st.selectbox("Selecciona el País:", paises_disponibles, key="select_pais")
+with col_pais:
+    pais_seleccionado_display = st.selectbox("Selecciona el País:", paises_disponibles, key="select_pais")
+
+# --- Botones de Descarga ---
+st.markdown("### Descargar Reglas de Validación")
+col_dl1, col_dl2, col_dl_spacer = st.columns([2, 2, 3])
+# Botón Volumetría
+with col_dl1:
+    reglas_vol = THRESHOLDS_POR_PAIS.get(pais_seleccionado_display, [])
+    if reglas_vol:
+        df_vol = pd.DataFrame(reglas_vol); df_vol.columns = ['Columna', 'Condición', 'Límite']
+        excel_vol = to_excel(df_vol)
+        st.download_button(label="📊 Descargar Reglas Volumetría (.xlsx)", data=excel_vol, file_name=f'reglas_volumetria_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_vol')
+    else: st.info(f"No hay reglas de volumetría para {pais_seleccionado_display}.")
+# Botón Geografía
+with col_dl2:
+    reglas_geo = CLASIFICACIONES_POR_PAIS.get(pais_seleccionado_display, {})
+    if reglas_geo:
+        lista_g = [{'Región': r, 'Ciudad/Dpto': c} for r, ciudades in reglas_geo.items() for c in ciudades]
+        if lista_g:
+            df_geo = pd.DataFrame(lista_g)
+            excel_geo = to_excel(df_geo)
+            st.download_button(label="🗺️ Descargar Reglas Geografía (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
+        else: st.info(f"No hay reglas geográficas detalladas para {pais_seleccionado_display}.")
+    else: st.info(f"No hay reglas geográficas definidas para {pais_seleccionado_display}.") # Si el país no está en CLASIFICACIONES...
+
+st.divider()
+
+# --- Carga de Archivos ---
 st.markdown("### Carga de Archivos Excel")
 col1_up, col2_up = st.columns(2)
 with col1_up: uploaded_file_num = st.file_uploader("Carga el archivo Numérico", type=["xlsx"], key="num")
@@ -305,7 +336,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada."); st.stop()
 
     # --- VALIDACIONES (V1-V11) ---
-    # (Pega aquí el código de V1 a V11 de la versión anterior 1.9, asegurándote que V5.3 tenga el ajuste para países sin reglas)
+    # (Pega aquí el código EXACTO de V1 a V11 de la versión anterior 1.9,
+    # asegurándote que V5.3 tenga el ajuste para países sin reglas)
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
@@ -478,7 +510,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             if ponderador_numerico.isnull().any(): content_v10 += f"<span class='status-error-inline'>[WARN]</span> '{col_pond}' con no numéricos.<br>"
             temp_df = df_numerico_full.copy(); temp_df['Ponderador_Num'] = ponderador_numerico
             for dem_col in cols_demo:
-                # Calcular suma por grupo, asegurando que Ponderador_Num sea sumado
                 suma_grupo = temp_df.groupby(dem_col, dropna=False)['Ponderador_Num'].sum().reset_index()
                 total_suma_variable = suma_grupo['Ponderador_Num'].sum()
                 if total_suma_variable > 0: suma_grupo['Porcentaje'] = (suma_grupo['Ponderador_Num'] / total_suma_variable) * 100
@@ -487,7 +518,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                 suma_grupo['Variable'] = dem_col; all_results.append(suma_grupo[['Variable', 'Categoría', 'Suma Ponderador', 'Porcentaje']])
             if all_results:
                 final_table = pd.concat(all_results, ignore_index=True)
-                # Formatear números DESPUÉS de calcular porcentajes
                 final_table['Suma Ponderador'] = final_table['Suma Ponderador'].apply(lambda x: f"{x:,.2f}" if pd.notna(x) and x != int(x) else f"{int(x):,}" if pd.notna(x) else "Error")
                 final_table['Porcentaje'] = final_table['Porcentaje'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "-")
                 final_table['Categoría'] = final_table['Categoría'].fillna('VACÍO/NULO')
@@ -495,7 +525,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             else: content_v10 += "[INFO] No se generaron resultados."; status_v10 = "Error"
         except Exception as e: status_v10 = "Error"; content_v10 += f"<span class='status-error-inline'>[ERROR]</span> {e}"
     validation_results.append({'key': key_v10, 'status': status_v10, 'content': content_v10})
-
 
     # V11: Volumetría (Umbrales Numéricos)
     key_v11 = "Volumetría (Umbrales Numéricos)"; content_v11 = ""; status_v11 = "Correcto"; id_unico = 'Unico'
@@ -541,6 +570,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
              else: content_v11 = prefix + "(Sin detalles específicos)"
     validation_results.append({'key': key_v11, 'status': status_v11, 'content': content_v11})
 
+
     # --- FIN VALIDACIONES ---
 
     st.success("Proceso de validación terminado.")
@@ -577,7 +607,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         status_class = f"status-{v['status'].lower()}"
         content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
         safe_content = content_detalle.replace('<br>', '<br/>')
-        safe_content = safe_content.replace('\n', '')
+        safe_content = safe_content.replace('\n', '') # Evita saltos de línea extraños en HTML
         html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
