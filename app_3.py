@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.0 para Streamlit (Renombra cols V11, añade % a V10)
+# Versión Atlantia 2.1 para Streamlit (Añade Geo El Salvador)
 
 import streamlit as st
 import pandas as pd
@@ -14,7 +14,7 @@ st.set_page_config(layout="wide", page_title="Validador Atlantia")
 # (Mismo CSS de la versión anterior)
 atlantia_css = """
 <style>
-    /* ... (pega aquí TODO el CSS de la versión anterior 1.9) ... */
+    /* ... (pega aquí TODO el CSS de la versión anterior 2.0) ... */
      /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -209,7 +209,6 @@ atlantia_css = """
     .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; border-color: rgba(13, 71, 161, 0.3); }
     .status-info .df-style th { background-color: rgba(13, 71, 161, 0.1); }
 
-
     /* Resumen Lista */
     .summary-list ul { list-style-type: none; padding-left: 0; }
     .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); }
@@ -234,7 +233,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("## Instrucciones")
 st.markdown("""1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas y de volumetría.\n2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.""")
 st.markdown("### Evaluaciones Realizadas:")
-st.markdown("""* **Tamaño:** Compara filas y columnas.\n* **Orden de IDs:** Verifica `Unico` vs `[auth]`.\n* **Finalización (lastpage):** Revisa unicidad.\n* **Periodo de Campo:** Muestra fechas de `startdate`.\n* **Agrupaciones:** Edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).\n* **Origen/Proveedor:** Conteo por proveedor.\n* **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.\n* **Abiertas ('Menciona'):** Lista respuestas.\n* **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.\n* **Suma Ponderador x Demo:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.\n* **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.""") # Actualizada V10
+st.markdown("""* **Tamaño:** Compara filas y columnas.\n* **Orden de IDs:** Verifica `Unico` vs `[auth]`.\n* **Finalización (lastpage):** Revisa unicidad.\n* **Periodo de Campo:** Muestra fechas de `startdate`.\n* **Agrupaciones:** Edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).\n* **Origen/Proveedor:** Conteo por proveedor.\n* **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.\n* **Abiertas ('Menciona'):** Lista respuestas.\n* **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.\n* **Suma Ponderador x Demo:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.\n* **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.""")
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
@@ -242,10 +241,23 @@ st.divider()
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
-    'Colombia': {}, 'Ecuador': {}, 'Perú': {}, 'R. Dominicana': {}, 'Honduras': {},
-    'El Salvador': {}, 'Costa Rica': {}, 'Puerto Rico': {}, 'Guatemala': {}, 'Colombia Minors': {}
+    'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
+    'Ecuador': {'Costa/Coast': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra/ Highland': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
+    'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
+    'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
+    'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
+    'Guatemala': {'Metro': ['Guatemala'],'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa'],'Occidente': ['Chimaltenango', 'Huehuetenango', 'Quetzaltenango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],'Sur Occidente': ['Escuintla', 'Retalhuleu', 'Suchitepequez'],'Sur Oriente': ['Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula']},
+    # [NUEVO] El Salvador
+    'El Salvador': {
+        'AMSS': ['San Salvador'],
+        'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],
+        'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],
+        'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']
+    },
+    # Mantener países sin geo explícita para el selector, pero vacíos
+    'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
-# [MODIFICADO] Umbrales numéricos (Volumetría) con nombres corregidos
+# Umbrales numéricos
 THRESHOLDS_POR_PAIS = {
     'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400}],
     'Colombia': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
@@ -260,7 +272,7 @@ THRESHOLDS_POR_PAIS = {
     'Guatemala': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
     'Colombia Minors': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
 }
-paises_disponibles = list(CLASIFICACIONES_POR_PAIS.keys())
+paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys())) # Ordenar alfabéticamente
 
 # --- SELECCIÓN DE PAÍS Y CARGA DE ARCHIVOS ---
 # ... (igual que antes) ...
@@ -273,7 +285,7 @@ with col2_up: uploaded_file_txt = st.file_uploader("Carga el archivo Textual", t
 
 # --- LÓGICA DE VALIDACIÓN ---
 if uploaded_file_num is not None and uploaded_file_txt is not None:
-    # ... (carga, optimización, V1-V9 igual que antes) ...
+    # ... (carga, optimización, V1-V11 igual que antes) ...
     st.info(f"Archivos cargados. Iniciando validación para **{pais_seleccionado_display}**...")
     st.divider()
     pais_clave_interna = pais_seleccionado_display
@@ -284,16 +296,16 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
     num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']; txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
     num_cols_extra = ['Ponderador', 'NSE', 'gender', 'AGErange', 'Region']
-    num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])]) # Añadir cols de umbrales
-    num_cols = num_cols_base + list(set([c for c in num_cols_extra if c in df_numerico_full.columns and c not in num_cols_base])) # Únicas y existentes
+    num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
+    num_cols = num_cols_base + list(set([c for c in num_cols_extra if c in df_numerico_full.columns and c not in num_cols_base]))
     num_ex = [c for c in num_cols_base if c in df_numerico_full.columns]; txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
     try:
-        df_numerico = df_numerico_full[num_ex] # Optimizado solo para V2, V3
-        df_textual = df_textual_full[txt_ex]   # Optimizado para V4, V5, V6, V8
+        df_numerico = df_numerico_full[num_ex]
+        df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada."); st.stop()
 
-    # --- VALIDACIONES (V1-V10 igual que antes) ---
-    # (Pega aquí el código V1 a V10 de la versión 1.7)
+    # --- VALIDACIONES (V1-V11) ---
+    # (Pega aquí el código de V1 a V11 de la versión anterior 1.9, asegurándote que V5.3 tenga el ajuste para países sin reglas)
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
@@ -451,7 +463,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e: status_v9 = "Error"; content_v9 += f"<span class='status-error-inline'>[ERROR]</span> al sumar '{col_pond}': {e}"
     validation_results.append({'key': key_v9, 'status': status_v9, 'content': content_v9})
 
-    # --- [MODIFICADO] Validación 10: Suma Ponderador por Demográfico ---
+    # V10: Suma Ponderador por Demo
     key_v10 = "Suma Ponderador por Demográfico"; content_v10 = ""; status_v10 = "Info"; col_pond = 'Ponderador'
     cols_demo = ['NSE', 'gender', 'AGErange', 'Region']
     ponderador_numerico = None; missing_cols = []
@@ -466,31 +478,26 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             if ponderador_numerico.isnull().any(): content_v10 += f"<span class='status-error-inline'>[WARN]</span> '{col_pond}' con no numéricos.<br>"
             temp_df = df_numerico_full.copy(); temp_df['Ponderador_Num'] = ponderador_numerico
             for dem_col in cols_demo:
+                # Calcular suma por grupo, asegurando que Ponderador_Num sea sumado
                 suma_grupo = temp_df.groupby(dem_col, dropna=False)['Ponderador_Num'].sum().reset_index()
-                # Calcular total para esta variable demográfica para el porcentaje
                 total_suma_variable = suma_grupo['Ponderador_Num'].sum()
-                if total_suma_variable > 0: # Evitar división por cero
-                    suma_grupo['Porcentaje'] = (suma_grupo['Ponderador_Num'] / total_suma_variable) * 100
-                else:
-                    suma_grupo['Porcentaje'] = 0.0
-                # Renombrar y añadir columna Variable
+                if total_suma_variable > 0: suma_grupo['Porcentaje'] = (suma_grupo['Ponderador_Num'] / total_suma_variable) * 100
+                else: suma_grupo['Porcentaje'] = 0.0
                 suma_grupo.rename(columns={dem_col: 'Categoría', 'Ponderador_Num': 'Suma Ponderador'}, inplace=True)
-                suma_grupo['Variable'] = dem_col
-                # Seleccionar y reordenar columnas
-                all_results.append(suma_grupo[['Variable', 'Categoría', 'Suma Ponderador', 'Porcentaje']])
+                suma_grupo['Variable'] = dem_col; all_results.append(suma_grupo[['Variable', 'Categoría', 'Suma Ponderador', 'Porcentaje']])
             if all_results:
                 final_table = pd.concat(all_results, ignore_index=True)
-                # Formatear números
-                final_table['Suma Ponderador'] = final_table['Suma Ponderador'].apply(lambda x: f"{x:,.2f}" if pd.notna(x) else "Error")
+                # Formatear números DESPUÉS de calcular porcentajes
+                final_table['Suma Ponderador'] = final_table['Suma Ponderador'].apply(lambda x: f"{x:,.2f}" if pd.notna(x) and x != int(x) else f"{int(x):,}" if pd.notna(x) else "Error")
                 final_table['Porcentaje'] = final_table['Porcentaje'].apply(lambda x: f"{x:.1f}%" if pd.notna(x) else "-")
                 final_table['Categoría'] = final_table['Categoría'].fillna('VACÍO/NULO')
                 content_v10 += final_table.to_html(classes='df-style', index=False)
             else: content_v10 += "[INFO] No se generaron resultados."; status_v10 = "Error"
         except Exception as e: status_v10 = "Error"; content_v10 += f"<span class='status-error-inline'>[ERROR]</span> {e}"
     validation_results.append({'key': key_v10, 'status': status_v10, 'content': content_v10})
-    # --- [FIN V10] ---
 
-    # --- [NUEVA] Validación 11: Volumetría (Umbrales Numéricos) ---
+
+    # V11: Volumetría (Umbrales Numéricos)
     key_v11 = "Volumetría (Umbrales Numéricos)"; content_v11 = ""; status_v11 = "Correcto"; id_unico = 'Unico'
     errores_umbrales = []
     reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
@@ -508,7 +515,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             except Exception as e:
                 errores_umbrales.append({'Columna': col, 'Error': f'No numérico ({e})', 'ID': '-', 'Valor': '-'})
                 if status_v11 != "Error": status_v11 = "Error"
-                continue # Saltar al siguiente regla
+                continue
             violaciones = pd.Series(False, index=df_numerico_full.index); cond_desc = ""
             if cond == 'mayor_a': violaciones = col_numerica.gt(lim) & col_numerica.notna(); cond_desc = f"ser > {lim}"
             elif cond == 'igual_a': violaciones = col_numerica.eq(lim) & col_numerica.notna(); cond_desc = f"ser == {lim}"
@@ -522,7 +529,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                 for idx, row in df_violaciones.iterrows():
                     uid = row[id_unico] if id_col_ok_v11 else f"Fila {idx+2}"
                     valor_violador_num = col_numerica.loc[idx]
-                    try: valor_violador_str = f"{valor_violador_num:,.2f}" if isinstance(valor_violador_num, (float, np.floating)) else f"{int(valor_violador_num):,}"
+                    try: valor_violador_str = f"{valor_violador_num:,.2f}" if isinstance(valor_violador_num, (float, np.floating)) and valor_violador_num != int(valor_violador_num) else f"{int(valor_violador_num):,}"
                     except: valor_violador_str = str(row[col]) # Fallback
                     errores_umbrales.append({'Columna': col, 'Error': f'Valor {valor_violador_str} viola no {cond_desc}', 'ID': uid, 'Valor': valor_violador_str})
         if status_v11 == "Correcto": content_v11 = f"<span class='status-correcto-inline'>[Correcto]</span> Cumplen umbrales."
@@ -533,7 +540,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
              if errores_umbrales: df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]; content_v11 = prefix + df_errores.to_html(classes='df-style', index=False)
              else: content_v11 = prefix + "(Sin detalles específicos)"
     validation_results.append({'key': key_v11, 'status': status_v11, 'content': content_v11})
-    # --- [FIN V11] ---
 
     # --- FIN VALIDACIONES ---
 
@@ -541,7 +547,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.divider()
 
     # --- ÁREA DE REPORTE ESTILIZADO ---
-    # ... (Mismo código de reporte que antes) ...
+    # ... (Mismo código de reporte V1.9) ...
     sort_order = {'Correcto': 1, 'Incorrecto': 2, 'Error': 3, 'Info': 4}
     sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
     final_numbered_results = []
