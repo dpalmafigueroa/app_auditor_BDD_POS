@@ -1,20 +1,19 @@
 # --- validador_app.py ---
-# Versión Atlantia 1.5 para Streamlit (Corrige SyntaxError V9)
+# Versión Atlantia 1.2 para Streamlit (Ajustes UI, Locale, Dark Mode)
+# (Versión ANTERIOR a la validación de umbrales V9)
 
 import streamlit as st
 import pandas as pd
 import locale
 import io # Para leer los archivos subidos
-import numpy as np # Para manejar tipos numéricos
+import numpy as np # Para manejar tipos numéricos (necesario por V3)
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Validador Atlantia")
 
-# --- CSS PERSONALIZADO ---
-# (Mismo CSS de la versión anterior - Versión Atlantia 1.2/1.3/1.4)
+# --- CSS PERSONALIZADO ATLANTIA + VALIDACIÓN + ADAPTATIVO (Revisado) ---
 atlantia_css = """
 <style>
-    /* ... (pega aquí TODO el CSS de la versión anterior) ... */
     /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -46,10 +45,10 @@ atlantia_css = """
 
         /* --- Variables ADAPTATIVAS Claro/Oscuro --- */
         /* Tema Claro (Por defecto) */
-        --text-color: #0E1117; /* Streamlit's default dark text */
+        --text-color: #0E1117;
         --text-color-subtle: #555;
         --bg-color: #FFFFFF;
-        --secondary-bg-color: #F0F2F6; /* Streamlit's light secondary bg */
+        --secondary-bg-color: #F0F2F6;
         --widget-bg: #FFFFFF;
         --input-border-color: #CCCCCC;
         --table-header-bg: #F0F2F6;
@@ -59,128 +58,63 @@ atlantia_css = """
 
     /* Tema Oscuro (Sobrescribe variables) */
     html[data-theme="dark"] {
-        --text-color: #FAFAFA; /* Streamlit's default light text */
+        --text-color: #FAFAFA;
         --text-color-subtle: #a0a0a0;
-        --bg-color: #0E1117; /* Streamlit's dark bg */
-        --secondary-bg-color: #1c202a; /* Darker secondary bg */
-        --widget-bg: #262730; /* Streamlit's dark widget bg */
+        --bg-color: #0E1117;
+        --secondary-bg-color: #1c202a;
+        --widget-bg: #262730;
         --input-border-color: #555;
         --table-header-bg: #222733;
         --table-row-even-bg: #2a303e;
         --table-border-color: #444;
-
-        /* Ajustar fondos pastel para mejor contraste en oscuro */
+        /* Ajustar fondos pastel */
         --validation-correct-bg: #1c3d1e;
         --validation-incorrect-bg: #4d1f23;
         --validation-info-bg: #1a3a57;
         --validation-error-bg: #4d3a1e;
-        /* Ajustar texto pastel si es necesario */
+        /* Ajustar texto pastel */
         --validation-correct-text: #b8f5b9;
         --validation-incorrect-text: #f7c5c7;
         --validation-info-text: #bce3ff;
         --validation-error-text: #ffe0b3;
     }
 
-    /* Ocultar menú y footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
 
-    /* Tipografía base (Usa variable adaptativa) */
-    body, * {
-        font-family: 'Hind', sans-serif;
-        color: var(--text-color);
-    }
+    body, * { font-family: 'Hind', sans-serif; color: var(--text-color); }
     .stApp { background-color: var(--bg-color); }
 
-    /* Títulos Atlantia (Color fijo) */
-    h1, .main-title, h2, .section-title, h3, .subsection-title {
-        font-family: 'Poppins', sans-serif !important;
-        font-weight: 700 !important;
-        color: var(--atlantia-violet) !important;
-    }
+    h1, .main-title, h2, .section-title, h3, .subsection-title { font-family: 'Poppins', sans-serif !important; font-weight: 700 !important; color: var(--atlantia-violet) !important; }
     h1, .main-title { font-size: 24pt !important; }
     h2, .section-title { font-size: 20pt !important; }
     h3, .subsection-title { font-size: 16pt !important; }
 
-    /* Labels Atlantia (Color fijo) */
     .stSelectbox label, .stTextInput label, .stTextArea label, .stFileUploader label,
-    .indicator-subtitle, .metric-label, .stMetric label, .stExpander summary {
-        font-family: 'Hind', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 14pt !important;
-        color: var(--atlantia-violet) !important;
-    }
+    .indicator-subtitle, .metric-label, .stMetric label, .stExpander summary { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 14pt !important; color: var(--atlantia-violet) !important; }
 
-    /* Cuerpo de texto (Usa variable adaptativa) */
-    p, .body-text, .stMarkdown, .stText, label, div[data-baseweb="select"] > div, .stAlert * {
-        font-family: 'Hind', sans-serif !important;
-        font-weight: 400 !important;
-        font-size: 12pt !important;
-        color: var(--text-color) !important;
-    }
+    p, .body-text, .stMarkdown, .stText, label, div[data-baseweb="select"] > div, .stAlert * { font-family: 'Hind', sans-serif !important; font-weight: 400 !important; font-size: 12pt !important; color: var(--text-color) !important; }
     .stExpander div[data-baseweb="block"] > div { color: var(--text-color) !important; }
 
-    /* Botones */
     .stButton button { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 12pt !important; border-radius: 8px !important; }
 
-    /* Inputs y Select (Adaptativo) */
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    div[data-baseweb="select"] > div {
-        border: 1px solid var(--input-border-color) !important;
-        background-color: var(--widget-bg) !important;
-        color: var(--text-color) !important;
-        border-radius: 8px !important;
-    }
-     .stTextInput > div > div > input:focus,
-     .stTextArea > div > div > textarea:focus {
-          border-color: var(--atlantia-violet) !important;
-          box-shadow: 0 0 0 2px rgba(101, 70, 195, 0.3) !important;
-     }
+    .stTextInput > div > div > input, .stTextArea > div > div > textarea, div[data-baseweb="select"] > div { border: 1px solid var(--input-border-color) !important; background-color: var(--widget-bg) !important; color: var(--text-color) !important; border-radius: 8px !important; }
+    .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus { border-color: var(--atlantia-violet) !important; box-shadow: 0 0 0 2px rgba(101, 70, 195, 0.3) !important; }
 
-    /* File Uploader (Adaptativo) */
-    .stFileUploader > div > div {
-         border: 2px dashed var(--atlantia-violet) !important;
-         background-color: var(--secondary-bg-color) !important;
-         border-radius: 10px !important;
-     }
-     .stFileUploader label span {
-         color: var(--text-color) !important;
-     }
+    .stFileUploader > div > div { border: 2px dashed var(--atlantia-violet) !important; background-color: var(--secondary-bg-color) !important; border-radius: 10px !important; }
+    .stFileUploader label span { color: var(--text-color) !important; }
 
-    /* Expander (Adaptativo) */
-    .streamlit-expanderHeader {
-         background-color: var(--secondary-bg-color) !important;
-         border: 1px solid var(--input-border-color) !important;
-         border-radius: 8px !important;
-    }
-    .streamlit-expanderHeader p {
-         color: var(--atlantia-violet) !important;
-    }
+    .streamlit-expanderHeader { background-color: var(--secondary-bg-color) !important; border: 1px solid var(--input-border-color) !important; border-radius: 8px !important; }
+    .streamlit-expanderHeader p { color: var(--atlantia-violet) !important; }
 
-    /* Métricas (Adaptativo) */
-    .stMetric {
-         background-color: var(--widget-bg);
-         border: 1px solid var(--input-border-color);
-         border-radius: 8px;
-         padding: 10px 15px;
-     }
-     .stMetric > label { color: var(--atlantia-violet) !important; }
-     .stMetric > div[data-testid="stMetricValue"] { color: var(--text-color) !important; }
-     .stMetric > div[data-testid="stMetricDelta"] { color: var(--text-color-subtle) !important; }
+    .stMetric { background-color: var(--widget-bg); border: 1px solid var(--input-border-color); border-radius: 8px; padding: 10px 15px; }
+    .stMetric > label { color: var(--atlantia-violet) !important; }
+    .stMetric > div[data-testid="stMetricValue"] { color: var(--text-color) !important; }
+    .stMetric > div[data-testid="stMetricDelta"] { color: var(--text-color-subtle) !important; }
 
-    /* --- ESTILOS DE VALIDACIÓN (Adaptativos) --- */
-    .validation-box {
-        border: 1px solid var(--input-border-color);
-        border-left-width: 5px !important;
-        border-radius: 8px; padding: 16px; margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1.6;
-    }
-    .validation-box h3 { border-bottom: 1px solid var(--input-border-color); color: var(--atlantia-violet); } /* Título principal violeta */
+    .validation-box { border: 1px solid var(--input-border-color); border-left-width: 5px !important; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1.6; }
+    .validation-box h3 { border-bottom: 1px solid var(--input-border-color); color: var(--atlantia-violet); }
     .validation-box h3.sub-heading { color: var(--text-color-subtle); border-bottom-style: dotted; }
 
-    /* Estados */
     .status-correcto { background-color: var(--validation-correct-bg); border-left-color: var(--validation-correct-border); }
     .status-correcto h3, .status-correcto span, .status-correcto p, .status-correcto li { color: var(--validation-correct-text) !important; }
     .status-correcto-inline { color: var(--validation-correct-text) !important; font-weight: bold; }
@@ -196,12 +130,10 @@ atlantia_css = """
     .status-error h3, .status-error span, .status-error p, .status-error li, .status-error .df-style th, .status-error .df-style td { color: var(--validation-error-text) !important; }
     .status-error-inline { color: var(--validation-error-text) !important; font-weight: bold; }
 
-     /* Tablas dentro de validación */
     .df-style { border-collapse: collapse; width: 95%; margin: 10px auto; font-size: 0.9em; }
     .df-style th, .df-style td { border: 1px solid var(--table-border-color); padding: 6px; color: var(--text-color) !important; }
     .df-style th { background-color: var(--table-header-bg); text-align: left; }
     .df-style tr:nth-child(even) { background-color: var(--table-row-even-bg); }
-    /* Override para tablas dentro de cajas de estado */
     .status-incorrecto .df-style th, .status-incorrecto .df-style td { color: var(--validation-incorrect-text) !important; border-color: rgba(183, 28, 28, 0.3); }
     .status-incorrecto .df-style th { background-color: rgba(183, 28, 28, 0.1); }
     .status-error .df-style th, .status-error .df-style td { color: var(--validation-error-text) !important; border-color: rgba(230, 81, 0, 0.3); }
@@ -209,33 +141,15 @@ atlantia_css = """
     .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; border-color: rgba(13, 71, 161, 0.3); }
     .status-info .df-style th { background-color: rgba(13, 71, 161, 0.1); }
 
-
-    /* Resumen Lista */
     .summary-list ul { list-style-type: none; padding-left: 0; }
     .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); }
     .summary-list li strong { color: var(--atlantia-violet); }
 
-    /* Header principal */
     .main-header-container { margin-bottom: 2rem; }
     .main-header { text-align: center; padding: 1rem 0; background: linear-gradient(135deg, var(--atlantia-violet) 0%, var(--atlantia-purple) 100%); border-radius: 15px; color: white; }
     .main-header h1 { color: white !important; font-family: 'Poppins', sans-serif !important; font-weight: 700 !important; font-size: 24pt !important; margin-bottom: 0.2rem; }
     .main-header .subtitle { color: rgba(255, 255, 255, 0.9) !important; font-family: 'Poppins', sans-serif !important; font-weight: 500 !important; font-size: 14pt !important; margin-top: 0; }
     .atlantia-logo { width: 40px; height: auto; vertical-align: middle; margin-right: 0.5rem; }
-
-    /* Estilo para la imagen de umbrales */
-    .threshold-image-container .stImage > img { /* Target the img inside stImage */
-        border: 1px solid var(--input-border-color);
-        border-radius: 8px;
-        padding: 5px;
-        background-color: var(--widget-bg);
-        margin-top: 10px;
-        max-width: 100%; /* Asegurar que no se desborde */
-        height: auto; /* Mantener proporción */
-        display: block; /* Centrar si es necesario con margin: auto */
-        margin-left: auto;
-        margin-right: auto;
-    }
-
 </style>
 """
 st.markdown(atlantia_css, unsafe_allow_html=True)
@@ -263,7 +177,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- INSTRUCCIONES ---
 st.markdown("## Instrucciones")
 st.markdown("""
-1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas y de umbrales.
+1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas.
 2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.
 """)
 
@@ -277,43 +191,15 @@ st.markdown("""
 * **Origen/Proveedor:** Conteo por proveedor.
 * **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region` y reporta IDs.
 * **Abiertas ('Menciona'):** Lista respuestas de columnas "menciona".
-* **Umbrales (Numérica):** Valida columnas específicas contra límites definidos por país (ver tabla).
 """)
-
-# --- Mostrar imagen de umbrales ---
-# Envuelve la imagen en un div con una clase para aplicar estilo específico si es necesario
-st.markdown('<div class="threshold-image-container">', unsafe_allow_html=True)
-try:
-    # Asegúrate que 'image_0d3ed0.png' esté en la misma carpeta o proporciona la ruta correcta
-    st.image("image_0d3ed0.png", caption="Tabla de Referencia para Validación de Umbrales", use_column_width=True)
-except FileNotFoundError:
-    st.warning("Advertencia: No se encontró la imagen 'image_0d3ed0.png'.")
-except Exception as img_e:
-    st.warning(f"No se pudo cargar la imagen: {img_e}")
-st.markdown('</div>', unsafe_allow_html=True)
-
+# (Se quitó la mención a umbrales V9)
 st.divider()
 
-# --- CONFIGURACIÓN DE REGLAS ---
+# --- CONFIGURACIÓN DE REGLAS (Solo Geo) ---
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
-    'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
-    'Colombia': {}, 'Ecuador': {}, 'Perú': {}, 'R. Dominicana': {}, 'Honduras': {},
-    'El Salvador': {}, 'Costa Rica': {}, 'Puerto Rico': {}, 'Guatemala': {}, 'Colombia Minors': {}
-}
-THRESHOLDS_POR_PAIS = {
-    'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400}],
-    'Colombia': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Ecuador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Perú': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'R. Dominicana': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Ron', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Whisky', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Honduras': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'El Salvador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Costa Rica': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Puerto Rico': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Panamá': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Guatemala': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
-    'Colombia Minors': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']}
+    # Añade aquí otros países SOLO CON CLASIFICACIÓN GEO si es necesario
 }
 paises_disponibles = list(CLASIFICACIONES_POR_PAIS.keys())
 
@@ -343,7 +229,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     try: df_numerico = df_numerico_full[num_ex]; df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna esencial {e} no encontrada."); st.stop()
 
-    # --- VALIDACIONES (V1-V9) ---
+    # --- VALIDACIONES (V1-V8) ---
+    # (Pega aquí el código EXACTO de V1 a V8 de la versión anterior 1.5, que ya incluía las correcciones V1, V3, V4, V8)
+
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
@@ -421,7 +309,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info'>[INFO]</span> No hay reglas geográficas para {pais_seleccionado_display}."
         else:
             col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD'
-            if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Cols Región/Ciudad no encontradas.")
+            if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región/Ciudad no encontradas.")
             err_reg = [];
             for idx, row in df_textual.iterrows():
                 reg, ciu = row[col_reg], row[col_ciu]
@@ -486,46 +374,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e: status_v8 = "Error"; content_v8 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     validation_results.append({'key': key_v8, 'status': status_v8, 'content': content_v8})
 
-    # --- Validación 9: Umbrales Numéricos ---
-    key_v9 = "Umbrales Numéricos"; content_v9 = ""; status_v9 = "Correcto"; id_unico = 'Unico'
-    errores_umbrales = []
-    reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
-    if not reglas_pais:
-        status_v9 = "Info"; content_v9 = f"[INFO] No hay reglas de umbrales para {pais_seleccionado_display}."
-    else:
-        id_col_ok_v9 = id_unico in df_numerico_full.columns
-        if not id_col_ok_v9: content_v9 += f"<span class='status-error-inline'>[WARN]</span> Col '{id_unico}' no encontrada.<br>"
-        for regla in reglas_pais:
-            col = regla['col']; cond = regla['cond']; lim = regla['lim']
-            if col not in df_numerico_full.columns:
-                errores_umbrales.append({'Columna': col, 'Error': 'Columna no encontrada', 'ID': '-', 'Valor': '-'})
-                if status_v9 != "Error": status_v9 = "Error"; continue
-            try: col_numerica = pd.to_numeric(df_numerico_full[col], errors='coerce')
-            except Exception as e: # Captura cualquier error de conversión
-                 errores_umbrales.append({'Columna': col, 'Error': f'No numérico ({e})', 'ID': '-', 'Valor': '-'})
-                 if status_v9 != "Error": status_v9 = "Error"
-                 continue # Saltar al siguiente regla
-            violaciones = pd.Series(False, index=df_numerico_full.index); cond_desc = ""
-            if cond == 'mayor_a': violaciones = col_numerica.gt(lim) & col_numerica.notna(); cond_desc = f"ser > {lim}"
-            elif cond == 'igual_a': violaciones = col_numerica.eq(lim) & col_numerica.notna(); cond_desc = f"ser == {lim}"
-            else: errores_umbrales.append({'Columna': col, 'Error': f'Cond "{cond}" no reconocida', 'ID': '-', 'Valor': '-'}); if status_v9 != "Error": status_v9 = "Error"; continue
-            df_violaciones = df_numerico_full.loc[violaciones]
-            if not df_violaciones.empty:
-                if status_v9 == "Correcto": status_v9 = "Incorrecto"
-                for idx, row in df_violaciones.iterrows():
-                    uid = row[id_unico] if id_col_ok_v9 else f"Fila {idx+2}"
-                    valor_violador_num = col_numerica.loc[idx]
-                    try: valor_violador_str = f"{valor_violador_num:.2f}" if isinstance(valor_violador_num, (float, np.floating)) else str(valor_violador_num)
-                    except: valor_violador_str = str(row[col]) # Fallback
-                    errores_umbrales.append({'Columna': col, 'Error': f'Valor {valor_violador_str} viola no {cond_desc}', 'ID': uid, 'Valor': valor_violador_str})
-        if status_v9 == "Correcto": content_v9 = f"<span class='status-correcto-inline'>[Correcto]</span> Cumplen umbrales."
-        elif status_v9 in ["Incorrecto", "Error"]:
-             prefix = ""
-             if status_v9 == "Incorrecto": prefix = f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Valores fuera de umbral:<br>"
-             if status_v9 == "Error": prefix = f"<span class='status-error-inline'>[ERROR]</span> Errores en validación:<br>"
-             if errores_umbrales: df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]; content_v9 = prefix + df_errores.to_html(classes='df-style', index=False)
-             else: content_v9 = prefix + "(Sin detalles específicos)"
-    validation_results.append({'key': key_v9, 'status': status_v9, 'content': content_v9})
 
     # --- FIN VALIDACIONES ---
 
@@ -561,8 +409,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     for v in final_numbered_results:
         status_class = f"status-{v['status'].lower()}"
         content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
-        # Asegurar que el contenido HTML sea seguro y reemplazar saltos de línea
-        safe_content = content_detalle.replace('<br>', '<br/>')
+        safe_content = content_detalle.replace('<br>', '<br/>') # Asegurar self-closing br
+        # Renderizar tablas HTML dentro de markdown requiere que no haya saltos de línea extraños
+        safe_content = safe_content.replace('\n', '')
         html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
