@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 1.4 para Streamlit (Añade Imagen Instrucciones, Confirma manejo duplicados V9)
+# Versión Atlantia 1.5 para Streamlit (Corrige SyntaxError V9)
 
 import streamlit as st
 import pandas as pd
@@ -11,7 +11,7 @@ import numpy as np # Para manejar tipos numéricos
 st.set_page_config(layout="wide", page_title="Validador Atlantia")
 
 # --- CSS PERSONALIZADO ---
-# (Mismo CSS de la versión anterior - Versión Atlantia 1.2/1.3)
+# (Mismo CSS de la versión anterior - Versión Atlantia 1.2/1.3/1.4)
 atlantia_css = """
 <style>
     /* ... (pega aquí TODO el CSS de la versión anterior) ... */
@@ -223,7 +223,7 @@ atlantia_css = """
     .atlantia-logo { width: 40px; height: auto; vertical-align: middle; margin-right: 0.5rem; }
 
     /* Estilo para la imagen de umbrales */
-    .threshold-image {
+    .threshold-image-container .stImage > img { /* Target the img inside stImage */
         border: 1px solid var(--input-border-color);
         border-radius: 8px;
         padding: 5px;
@@ -235,6 +235,7 @@ atlantia_css = """
         margin-left: auto;
         margin-right: auto;
     }
+
 </style>
 """
 st.markdown(atlantia_css, unsafe_allow_html=True)
@@ -279,33 +280,28 @@ st.markdown("""
 * **Umbrales (Numérica):** Valida columnas específicas contra límites definidos por país (ver tabla).
 """)
 
-# --- [NUEVO] Mostrar imagen de umbrales ---
-# Asumiendo que guardaste la imagen como 'umbrales_condiciones.png' en la misma carpeta que tu script .py
+# --- Mostrar imagen de umbrales ---
+# Envuelve la imagen en un div con una clase para aplicar estilo específico si es necesario
+st.markdown('<div class="threshold-image-container">', unsafe_allow_html=True)
 try:
-    # Ajusta el nombre del archivo si es diferente
+    # Asegúrate que 'image_0d3ed0.png' esté en la misma carpeta o proporciona la ruta correcta
     st.image("image_0d3ed0.png", caption="Tabla de Referencia para Validación de Umbrales", use_column_width=True)
-    # Añadir clase CSS a la imagen (opcional, para estilizarla si quieres)
-    st.markdown('<style>.stImage > img { border-radius: 8px; border: 1px solid var(--input-border-color); background-color: var(--widget-bg); padding: 5px; }</style>', unsafe_allow_html=True)
 except FileNotFoundError:
-    st.warning("Advertencia: No se encontró la imagen 'image_0d3ed0.png' para mostrar la tabla de umbrales.")
+    st.warning("Advertencia: No se encontró la imagen 'image_0d3ed0.png'.")
 except Exception as img_e:
-    st.warning(f"No se pudo cargar la imagen de umbrales: {img_e}")
-
+    st.warning(f"No se pudo cargar la imagen: {img_e}")
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
-# Clasificaciones geográficas
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
-    # Añadir entradas vacías para los otros países para que aparezcan en el selector
     'Colombia': {}, 'Ecuador': {}, 'Perú': {}, 'R. Dominicana': {}, 'Honduras': {},
     'El Salvador': {}, 'Costa Rica': {}, 'Puerto Rico': {}, 'Guatemala': {}, 'Colombia Minors': {}
 }
-# Umbrales numéricos
 THRESHOLDS_POR_PAIS = {
-    # Mismo diccionario THRESHOLDS_POR_PAIS que en la versión anterior
     'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400}],
     'Colombia': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
     'Ecuador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
@@ -333,7 +329,6 @@ with col2_up: uploaded_file_txt = st.file_uploader("Carga el archivo Textual", t
 
 # --- LÓGICA DE VALIDACIÓN ---
 if uploaded_file_num is not None and uploaded_file_txt is not None:
-    # ... (resto del código igual, incluyendo carga, optimización y V1-V8) ...
     st.info(f"Archivos cargados. Iniciando validación para **{pais_seleccionado_display}**...")
     st.divider()
     pais_clave_interna = pais_seleccionado_display
@@ -348,12 +343,11 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     try: df_numerico = df_numerico_full[num_ex]; df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna esencial {e} no encontrada."); st.stop()
 
-    # --- VALIDACIONES (V1-V8) ---
-    # (Pega aquí el código de V1 a V8 de la versión anterior)
+    # --- VALIDACIONES (V1-V9) ---
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
-    content_v1 += f"- Num: {fn} filas x {cn} columnas<br>- Txt: {ft} filas x {ct} columnas<br><br><b>Comparación:</b><br>" # Texto cambiado
+    content_v1 += f"- Num: {fn} filas x {cn} columnas<br>- Txt: {ft} filas x {ct} columnas<br><br><b>Comparación:</b><br>"
     if fn == ft and cn == ct: content_v1 += "<span class='status-correcto-inline'>[Correcto]</span> Coinciden."
     else: status_v1 = "Incorrecto"; content_v1 += "<span class='status-incorrecto-inline'>[Incorrecto]</span> Diferentes.<br>";
     if fn != ft: content_v1 += "- Filas.<br>"
@@ -363,7 +357,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # V2: Orden IDs
     key_v2 = "Orden de Códigos Únicos"; content_v2 = ""; status_v2 = "Correcto"; col_num = 'Unico'; col_txt = '[auth]'
     try:
-        # Asegurarse que las columnas existan antes de accederlas
         if col_num not in df_numerico.columns: raise KeyError(f"{col_num} (Numérica)")
         if col_txt not in df_textual.columns: raise KeyError(f"{col_txt} (Textual)")
         cod_num = df_numerico[col_num]; cod_txt = df_textual[col_txt]
@@ -425,10 +418,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display})</h3>"; status_v5_3 = "Correcto"
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
-        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info'>[INFO]</span> No hay reglas geográficas definidas para {pais_seleccionado_display}."
+        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info'>[INFO]</span> No hay reglas geográficas para {pais_seleccionado_display}."
         else:
             col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD'
-            if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región ('{col_reg}') o Ciudad ('{col_ciu}') no encontradas.")
+            if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Cols Región/Ciudad no encontradas.")
             err_reg = [];
             for idx, row in df_textual.iterrows():
                 reg, ciu = row[col_reg], row[col_ciu]
@@ -493,7 +486,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e: status_v8 = "Error"; content_v8 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     validation_results.append({'key': key_v8, 'status': status_v8, 'content': content_v8})
 
-    # V9: Umbrales Numéricos
+    # --- Validación 9: Umbrales Numéricos ---
     key_v9 = "Umbrales Numéricos"; content_v9 = ""; status_v9 = "Correcto"; id_unico = 'Unico'
     errores_umbrales = []
     reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
@@ -504,12 +497,14 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         if not id_col_ok_v9: content_v9 += f"<span class='status-error-inline'>[WARN]</span> Col '{id_unico}' no encontrada.<br>"
         for regla in reglas_pais:
             col = regla['col']; cond = regla['cond']; lim = regla['lim']
-            # Pandas maneja duplicados añadiendo .1, .2 etc. Al buscar por 'col', solo encontrará la primera.
             if col not in df_numerico_full.columns:
                 errores_umbrales.append({'Columna': col, 'Error': 'Columna no encontrada', 'ID': '-', 'Valor': '-'})
                 if status_v9 != "Error": status_v9 = "Error"; continue
             try: col_numerica = pd.to_numeric(df_numerico_full[col], errors='coerce')
-            except Exception: errores_umbrales.append({'Columna': col, 'Error': 'No numérico', 'ID': '-', 'Valor': '-'}); if status_v9 != "Error": status_v9 = "Error"; continue
+            except Exception as e: # Captura cualquier error de conversión
+                 errores_umbrales.append({'Columna': col, 'Error': f'No numérico ({e})', 'ID': '-', 'Valor': '-'})
+                 if status_v9 != "Error": status_v9 = "Error"
+                 continue # Saltar al siguiente regla
             violaciones = pd.Series(False, index=df_numerico_full.index); cond_desc = ""
             if cond == 'mayor_a': violaciones = col_numerica.gt(lim) & col_numerica.notna(); cond_desc = f"ser > {lim}"
             elif cond == 'igual_a': violaciones = col_numerica.eq(lim) & col_numerica.notna(); cond_desc = f"ser == {lim}"
@@ -519,16 +514,17 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                 if status_v9 == "Correcto": status_v9 = "Incorrecto"
                 for idx, row in df_violaciones.iterrows():
                     uid = row[id_unico] if id_col_ok_v9 else f"Fila {idx+2}"
-                    valor_violador = row[col];
-                    try: valor_violador = f"{float(valor_violador):.2f}"
-                    except: valor_violador = str(valor_violador)
-                    errores_umbrales.append({'Columna': col, 'Error': f'Valor {valor_violador} viola regla no {cond_desc}', 'ID': uid, 'Valor': valor_violador})
+                    valor_violador_num = col_numerica.loc[idx]
+                    try: valor_violador_str = f"{valor_violador_num:.2f}" if isinstance(valor_violador_num, (float, np.floating)) else str(valor_violador_num)
+                    except: valor_violador_str = str(row[col]) # Fallback
+                    errores_umbrales.append({'Columna': col, 'Error': f'Valor {valor_violador_str} viola no {cond_desc}', 'ID': uid, 'Valor': valor_violador_str})
         if status_v9 == "Correcto": content_v9 = f"<span class='status-correcto-inline'>[Correcto]</span> Cumplen umbrales."
-        elif status_v9 == "Incorrecto" or status_v9 == "Error":
-             if status_v9 == "Incorrecto": content_v9 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Valores fuera de umbral:<br>"
-             if status_v9 == "Error": content_v9 += f"<span class='status-error-inline'>[ERROR]</span> Errores en validación:<br>"
-             df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]
-             content_v9 += df_errores.to_html(classes='df-style', index=False)
+        elif status_v9 in ["Incorrecto", "Error"]:
+             prefix = ""
+             if status_v9 == "Incorrecto": prefix = f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Valores fuera de umbral:<br>"
+             if status_v9 == "Error": prefix = f"<span class='status-error-inline'>[ERROR]</span> Errores en validación:<br>"
+             if errores_umbrales: df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]; content_v9 = prefix + df_errores.to_html(classes='df-style', index=False)
+             else: content_v9 = prefix + "(Sin detalles específicos)"
     validation_results.append({'key': key_v9, 'status': status_v9, 'content': content_v9})
 
     # --- FIN VALIDACIONES ---
@@ -565,7 +561,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     for v in final_numbered_results:
         status_class = f"status-{v['status'].lower()}"
         content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
-        html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{content_detalle.replace('<br>', '<br/>')}</div>"""
+        # Asegurar que el contenido HTML sea seguro y reemplazar saltos de línea
+        safe_content = content_detalle.replace('<br>', '<br/>')
+        html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
     st.success("¡Validación completada!")
