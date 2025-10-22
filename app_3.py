@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 1.1 para Streamlit (Adaptativo Claro/Oscuro)
+# Versión Atlantia 1.2 para Streamlit (Ajustes UI, Locale, Dark Mode, México)
 
 import streamlit as st
 import pandas as pd
@@ -9,7 +9,7 @@ import io # Para leer los archivos subidos
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Validador Atlantia")
 
-# --- CSS PERSONALIZADO ATLANTIA + VALIDACIÓN + ADAPTATIVO ---
+# --- CSS PERSONALIZADO ATLANTIA + VALIDACIÓN + ADAPTATIVO (Revisado) ---
 atlantia_css = """
 <style>
     /* Importar fuentes Atlantia */
@@ -43,147 +43,182 @@ atlantia_css = """
 
         /* --- Variables ADAPTATIVAS Claro/Oscuro --- */
         /* Tema Claro (Por defecto) */
-        --text-color: #000000; /* Negro para texto normal */
-        --text-color-subtle: #444; /* Gris oscuro para texto secundario */
-        --bg-color: #FFFFFF; /* Fondo principal blanco */
-        --secondary-bg-color: #f8f9ff; /* Fondo secundario muy claro */
-        --input-border-color: #e0e0e0; /* Borde claro para inputs */
-        --table-header-bg: #f4f4f4; /* Fondo header tabla claro */
-        --table-row-even-bg: #f9f9f9; /* Fondo fila par tabla */
+        --text-color: #0E1117; /* Streamlit's default dark text */
+        --text-color-subtle: #555;
+        --bg-color: #FFFFFF;
+        --secondary-bg-color: #F0F2F6; /* Streamlit's light secondary bg */
+        --widget-bg: #FFFFFF;
+        --input-border-color: #CCCCCC;
+        --table-header-bg: #F0F2F6;
+        --table-row-even-bg: #FFFFFF;
+        --table-border-color: #E0E0E0;
     }
 
     /* Tema Oscuro (Sobrescribe variables) */
     html[data-theme="dark"] {
-        --text-color: #FAFAFA; /* Blanco/Gris muy claro para texto normal */
-        --text-color-subtle: #a0a0a0; /* Gris claro para texto secundario */
-        --bg-color: #0E1117; /* Fondo principal oscuro de Streamlit */
-        --secondary-bg-color: #1c202a; /* Fondo secundario un poco más claro */
-        --input-border-color: #444; /* Borde gris oscuro para inputs */
-        --table-header-bg: #222733; /* Fondo header tabla oscuro */
-        --table-row-even-bg: #2a303e; /* Fondo fila par tabla oscuro */
+        --text-color: #FAFAFA; /* Streamlit's default light text */
+        --text-color-subtle: #a0a0a0;
+        --bg-color: #0E1117; /* Streamlit's dark bg */
+        --secondary-bg-color: #1c202a; /* Darker secondary bg */
+        --widget-bg: #262730; /* Streamlit's dark widget bg */
+        --input-border-color: #555;
+        --table-header-bg: #222733;
+        --table-row-even-bg: #2a303e;
+        --table-border-color: #444;
 
-        /* Ajustar fondos de validación para tema oscuro si es necesario */
-        /* (Los colores pastel actuales podrían funcionar, pero podrías oscurecerlos) */
-        /* Ejemplo: --validation-correct-bg: #1c3d1e; */
+        /* Ajustar fondos pastel para mejor contraste en oscuro */
+        --validation-correct-bg: #1c3d1e;
+        --validation-incorrect-bg: #4d1f23;
+        --validation-info-bg: #1a3a57;
+        --validation-error-bg: #4d3a1e;
+        /* Ajustar texto pastel si es necesario */
+        --validation-correct-text: #b8f5b9;
+        --validation-incorrect-text: #f7c5c7;
+        --validation-info-text: #bce3ff;
+        --validation-error-text: #ffe0b3;
     }
 
-    /* Ocultar menú y footer de Streamlit */
+    /* Ocultar menú y footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Tipografía base Atlantia */
+    /* Tipografía base (Usa variable adaptativa) */
     body, * {
         font-family: 'Hind', sans-serif;
-        color: var(--text-color); /* Usa la variable adaptativa */
+        color: var(--text-color);
     }
+    /* Asegurar fondo principal */
+    .stApp { background-color: var(--bg-color); }
 
-    /* Títulos - Poppins Bold (Color fijo Atlantia) */
+    /* Títulos Atlantia (Color fijo) */
     h1, .main-title, h2, .section-title, h3, .subsection-title {
         font-family: 'Poppins', sans-serif !important;
         font-weight: 700 !important;
-        color: var(--atlantia-violet) !important; /* Mantenemos color Atlantia */
+        color: var(--atlantia-violet) !important;
     }
     h1, .main-title { font-size: 24pt !important; }
-    h2, .section-title { font-size: 20pt !important; }
-    h3, .subsection-title { font-size: 16pt !important; }
+    h2, .section-title { font-size: 20pt !important; } /* Aplicado a st.subheader */
+    h3, .subsection-title { font-size: 16pt !important; } /* Usado para títulos dentro de validaciones */
 
-    /* Subtítulos de indicadores (Color fijo Atlantia) */
-    .indicator-subtitle, .metric-label, .stMetric label {
+    /* Labels Atlantia (Color fijo) */
+    .stSelectbox label, .stTextInput label, .stTextArea label, .stFileUploader label,
+    .indicator-subtitle, .metric-label, .stMetric label, .stExpander summary {
         font-family: 'Hind', sans-serif !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
         font-size: 14pt !important;
         color: var(--atlantia-violet) !important;
     }
 
     /* Cuerpo de texto (Usa variable adaptativa) */
-    p, .body-text, .stMarkdown, .stText, label, div[data-baseweb="select"] > div {
+    p, .body-text, .stMarkdown, .stText, label, div[data-baseweb="select"] > div, .stAlert * {
         font-family: 'Hind', sans-serif !important;
         font-weight: 400 !important;
         font-size: 12pt !important;
-        color: var(--text-color) !important; /* Usa variable */
+        color: var(--text-color) !important;
+    }
+    .stExpander div[data-baseweb="block"] > div { color: var(--text-color) !important; }
+
+    /* Botones */
+    .stButton button { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 12pt !important; border-radius: 8px !important; }
+
+    /* Inputs y Select (Adaptativo) */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    div[data-baseweb="select"] > div {
+        border: 1px solid var(--input-border-color) !important;
+        background-color: var(--widget-bg) !important;
+        color: var(--text-color) !important;
+        border-radius: 8px !important;
+    }
+     .stTextInput > div > div > input:focus,
+     .stTextArea > div > div > textarea:focus {
+          border-color: var(--atlantia-violet) !important;
+          box-shadow: 0 0 0 2px rgba(101, 70, 195, 0.3) !important;
+     }
+
+    /* File Uploader (Adaptativo) */
+    .stFileUploader > div > div {
+         border: 2px dashed var(--atlantia-violet) !important;
+         background-color: var(--secondary-bg-color) !important;
+         border-radius: 10px !important;
+     }
+     .stFileUploader label span {
+         color: var(--text-color) !important;
+     }
+
+    /* Expander (Adaptativo) */
+    .streamlit-expanderHeader {
+         background-color: var(--secondary-bg-color) !important;
+         border: 1px solid var(--input-border-color) !important;
+         border-radius: 8px !important;
+    }
+    .streamlit-expanderHeader p {
+         color: var(--atlantia-violet) !important;
     }
 
-    /* Elementos específicos de Streamlit */
-    .stButton button { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 12pt !important; border-radius: 8px !important; }
-    .stSelectbox label, .stTextInput label, .stTextArea label, .stFileUploader label { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 14pt !important; color: var(--atlantia-violet) !important; }
-    .stDataFrame, .stTable { font-family: 'Hind', sans-serif !important; font-size: 11pt !important; }
-    .stExpander summary { font-family: 'Hind', sans-serif !important; font-weight: 600 !important; font-size: 14pt !important; color: var(--atlantia-violet) !important; }
+    /* Métricas (Adaptativo) */
+    .stMetric {
+         background-color: var(--widget-bg);
+         border: 1px solid var(--input-border-color);
+         border-radius: 8px;
+         padding: 10px 15px;
+     }
+     .stMetric > label { color: var(--atlantia-violet) !important; }
+     .stMetric > div[data-testid="stMetricValue"] { color: var(--text-color) !important; }
+     .stMetric > div[data-testid="stMetricDelta"] { color: var(--text-color-subtle) !important; }
 
-    /* --- ESTILOS DE VALIDACIÓN (Usan variables fijas pastel) --- */
-    .validation-box { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1.6; }
-    .validation-box h3 { margin-top: 0; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #eee; }
-    .validation-box h3.sub-heading { margin-top: 15px; margin-bottom: 10px; padding-bottom: 5px; font-size: 1.1em; border-bottom: 1px solid #eee; color: var(--text-color-subtle); } /* Subtítulo usa color sutil */
-    /* Correcto */
-    .status-correcto { background-color: var(--validation-correct-bg); border-left: 5px solid var(--validation-correct-border); }
-    .status-correcto h3, .status-correcto span { color: var(--validation-correct-text); } /* Aplicar color a spans también */
-    .status-correcto-inline { color: var(--validation-correct-text); font-weight: bold; }
-     /* Incorrecto */
-    .status-incorrecto { background-color: var(--validation-incorrect-bg); border-left: 5px solid var(--validation-incorrect-border); }
-    .status-incorrecto h3, .status-incorrecto span { color: var(--validation-incorrect-text); }
-    .status-incorrecto-inline { color: var(--validation-incorrect-text); font-weight: bold; }
-    /* Info */
-    .status-info { background-color: var(--validation-info-bg); border-left: 5px solid var(--validation-info-border); }
-    .status-info h3, .status-info span { color: var(--validation-info-text); }
-    /* Error */
-    .status-error { background-color: var(--validation-error-bg); border-left: 5px solid var(--validation-error-border); }
-    .status-error h3, .status-error span { color: var(--validation-error-text); }
-    .status-error-inline { color: var(--validation-error-text); font-weight: bold; }
-     /* Tablas dentro de validación (Usan variables adaptativas) */
+    /* --- ESTILOS DE VALIDACIÓN (Adaptativos) --- */
+    .validation-box {
+        border: 1px solid var(--input-border-color);
+        border-left-width: 5px !important;
+        border-radius: 8px; padding: 16px; margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1.6;
+    }
+    .validation-box h3 { border-bottom: 1px solid var(--input-border-color); color: var(--atlantia-violet); } /* Título principal violeta */
+    .validation-box h3.sub-heading { color: var(--text-color-subtle); border-bottom-style: dotted; }
+
+    /* Estados de Validación */
+    .status-correcto { background-color: var(--validation-correct-bg); border-left-color: var(--validation-correct-border); }
+    .status-correcto h3, .status-correcto span, .status-correcto p, .status-correcto li { color: var(--validation-correct-text) !important; } /* Aplicar a más elementos */
+    .status-correcto-inline { color: var(--validation-correct-text) !important; font-weight: bold; }
+
+    .status-incorrecto { background-color: var(--validation-incorrect-bg); border-left-color: var(--validation-incorrect-border); }
+    .status-incorrecto h3, .status-incorrecto span, .status-incorrecto p, .status-incorrecto li { color: var(--validation-incorrect-text) !important; }
+    .status-incorrecto-inline { color: var(--validation-incorrect-text) !important; font-weight: bold; }
+
+    .status-info { background-color: var(--validation-info-bg); border-left-color: var(--validation-info-border); }
+    .status-info h3, .status-info span, .status-info p, .status-info li { color: var(--validation-info-text) !important; }
+
+    .status-error { background-color: var(--validation-error-bg); border-left-color: var(--validation-error-border); }
+    .status-error h3, .status-error span, .status-error p, .status-error li { color: var(--validation-error-text) !important; }
+    .status-error-inline { color: var(--validation-error-text) !important; font-weight: bold; }
+
+     /* Tablas dentro de validación */
     .df-style { border-collapse: collapse; width: 95%; margin: 10px auto; font-size: 0.9em; }
-    .df-style th, .df-style td { border: 1px solid var(--input-border-color); padding: 6px; } /* Usa variable borde */
-    .df-style th { background-color: var(--table-header-bg); text-align: left; color: var(--text-color); } /* Usa variables */
-    .df-style tr:nth-child(even) { background-color: var(--table-row-even-bg); } /* Usa variable */
-    .df-style td { color: var(--text-color); } /* Usa variable */
+    .df-style th, .df-style td { border: 1px solid var(--table-border-color); padding: 6px; color: var(--text-color) !important; }
+    .df-style th { background-color: var(--table-header-bg); text-align: left; }
+    .df-style tr:nth-child(even) { background-color: var(--table-row-even-bg); }
+
     /* Resumen Lista */
     .summary-list ul { list-style-type: none; padding-left: 0; }
-    .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); } /* Usa variable borde */
+    .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); }
     .summary-list li strong { color: var(--atlantia-violet); }
 
     /* --- FIN ESTILOS VALIDACIÓN --- */
 
-    /* Header principal (Fijo) */
+    /* Header principal */
     .main-header-container { margin-bottom: 2rem; }
     .main-header { text-align: center; padding: 1rem 0; background: linear-gradient(135deg, var(--atlantia-violet) 0%, var(--atlantia-purple) 100%); border-radius: 15px; color: white; }
     .main-header h1 { color: white !important; font-family: 'Poppins', sans-serif !important; font-weight: 700 !important; font-size: 24pt !important; margin-bottom: 0.2rem; }
     .main-header .subtitle { color: rgba(255, 255, 255, 0.9) !important; font-family: 'Poppins', sans-serif !important; font-weight: 500 !important; font-size: 14pt !important; margin-top: 0; }
     .atlantia-logo { width: 40px; height: auto; vertical-align: middle; margin-right: 0.5rem; }
 
-     /* Ajustes inputs para mejor visibilidad en oscuro */
-     html[data-theme="dark"] .stTextInput > div > div > input,
-     html[data-theme="dark"] .stTextArea > div > div > textarea,
-     html[data-theme="dark"] div[data-baseweb="select"] > div {
-         border-color: var(--input-border-color) !important;
-         background-color: var(--secondary-bg-color) !important; /* Fondo input oscuro */
-         color: var(--text-color) !important; /* Texto input oscuro */
-     }
-     html[data-theme="dark"] .stTextInput > div > div > input:focus,
-     html[data-theme="dark"] .stTextArea > div > div > textarea:focus {
-          border-color: var(--atlantia-violet) !important;
-          box-shadow: 0 0 0 3px rgba(101, 70, 195, 0.3) !important; /* Sombra foco */
-     }
-     /* File Uploader oscuro */
-      html[data-theme="dark"] .stFileUploader > div > div {
-         border-color: var(--atlantia-violet) !important;
-         background-color: rgba(101, 70, 195, 0.15) !important; /* Ligeramente más opaco */
-     }
-     /* Expander oscuro */
-      html[data-theme="dark"] .streamlit-expanderHeader {
-         background-color: rgba(101, 70, 195, 0.2) !important; /* Más opaco */
-         border-color: var(--atlantia-violet) !important;
-     }
-     html[data-theme="dark"] .stMetric {
-         background-color: var(--secondary-bg-color); /* Fondo métricas */
-         border-radius: 8px;
-         padding: 10px;
-     }
-
 </style>
 """
 st.markdown(atlantia_css, unsafe_allow_html=True)
 
 # --- HEADER PERSONALIZADO ---
-# ... (mismo código del header que antes) ...
 st.markdown('<div class="main-header-container">', unsafe_allow_html=True)
 st.markdown("""
 <div class="main-header">
@@ -203,98 +238,86 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
+# --- INSTRUCCIONES ---
+st.markdown("## Instrucciones")
+st.markdown("""
+1.  **Selecciona el país** para el cual se realizará la validación geográfica.
+2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.
+""")
+
+st.markdown("### Evaluaciones Realizadas:")
+st.markdown("""
+* **Tamaño:** Compara si ambas bases tienen el mismo número de filas y columnas.
+* **Orden de IDs:** Verifica que los identificadores únicos (`Unico` vs `[auth]`) estén en el mismo orden.
+* **Finalización (lastpage):** Revisa que las columnas `lastpage` y `lastpage_Parte2` tengan un único valor.
+* **Periodo de Campo:** Muestra la fecha de inicio y fin basada en la columna `startdate`.
+* **Agrupaciones:**
+    * **Edad:** Compara rangos de edad con la edad numérica (`[age]`).
+    * **NSE:** Cruza `NSE` vs `NSE2` para verificar consistencia.
+    * **Geografía:** Valida que las ciudades pertenezcan a la región correcta según el país seleccionado.
+* **Origen/Proveedor:** Muestra el conteo de encuestas por proveedor.
+* **Nulos (Numérica):** Busca celdas vacías en columnas clave (`NSE`, `gender`, `AGErange`, `Region`) y reporta los IDs afectados.
+* **Abiertas ('Menciona'):** Extrae y lista las respuestas de columnas que contienen la palabra "menciona".
+""")
+st.divider()
+
 # --- CONFIGURACIÓN FIJA (Clasificaciones de país) ---
 CLASIFICACIONES_POR_PAIS = {
-    'Panamá': { # Cambiado a nombre legible
-        'Centro': [
-            'Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé',
-            'Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo',
-            'Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján',
-            'Capira', 'Chame', 'San Carlos'
-        ],
-        'Metro': [
-            'Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga',
-            'Chepigana', 'Pinogana'
-        ],
-        'Oeste': [
-            'Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David',
-            'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix',
-            'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola',
-            'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú',
-            'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas',
-            'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí',
-            'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas',
-            'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco',
-            'Santa Fé', 'Santiago', 'Soná'
-        ]
+    'Panamá': {
+        'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],
+        'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],
+        'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']
     },
-    # --- AÑADE AQUÍ OTROS PAÍSES ---
-    # 'Otro País': {
-    #    'RegionX': ['CiudadA', 'CiudadB'],
-    #    'RegionY': ['CiudadC']
-    # }
-    # -----------------------------
+    'México': {
+        'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],
+        'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],
+        'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],
+        'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']
+    }
 }
 paises_disponibles = list(CLASIFICACIONES_POR_PAIS.keys())
 
 # --- SELECCIÓN DE PAÍS Y CARGA DE ARCHIVOS ---
-# ... (mismo código de selección y carga que antes) ...
-col_pais, col_vacia = st.columns([1, 2]) # Columna para el selector
+col_pais, col_vacia = st.columns([1, 2])
 with col_pais:
-    pais_seleccionado_display = st.selectbox("Selecciona el País:", paises_disponibles, key="select_pais") # Añadida key
+    pais_seleccionado_display = st.selectbox("Selecciona el País:", paises_disponibles, key="select_pais")
 
 st.markdown("### Carga de Archivos Excel")
 col1_up, col2_up = st.columns(2)
-with col1_up:
-    uploaded_file_num = st.file_uploader("Carga el archivo Numérico", type=["xlsx"], key="num")
-with col2_up:
-    uploaded_file_txt = st.file_uploader("Carga el archivo Textual", type=["xlsx"], key="txt")
+with col1_up: uploaded_file_num = st.file_uploader("Carga el archivo Numérico", type=["xlsx"], key="num")
+with col2_up: uploaded_file_txt = st.file_uploader("Carga el archivo Textual", type=["xlsx"], key="txt")
 
-
-# --- LÓGICA DE VALIDACIÓN (Solo si ambos archivos están cargados) ---
+# --- LÓGICA DE VALIDACIÓN ---
 if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.info(f"Archivos cargados. Iniciando validación para **{pais_seleccionado_display}**...")
     st.divider()
 
-    # Mapeo display a clave interna (ahora coincide)
     pais_clave_interna = pais_seleccionado_display
+    validation_results = []
 
-    validation_results = [] # Reiniciar resultados
-
-    # --- Carga de DataFrames ---
-    # ... (mismo código de carga y optimización que antes) ...
+    # --- Carga ---
     try:
         df_numerico_full = pd.read_excel(io.BytesIO(uploaded_file_num.getvalue()))
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
-        #st.success("Archivos leídos correctamente.") # Mensaje menos intrusivo
-    except Exception as e:
-        st.error(f"Error crítico al leer los archivos Excel: {e}")
-        st.stop()
-    columnas_necesarias_numerico = ['Unico', 'lastpage', 'lastpage_Parte2']
-    columnas_necesarias_textual = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
-    cols_existentes_num = [col for col in columnas_necesarias_numerico if col in df_numerico_full.columns]
-    cols_existentes_txt = [col for col in columnas_necesarias_textual if col in df_textual_full.columns]
-    try:
-        df_numerico = df_numerico_full[cols_existentes_num]
-        df_textual = df_textual_full[cols_existentes_txt]
-    except KeyError as e: st.error(f"Error: Columna esencial {e} no encontrada."); st.stop()
+    except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
+    # --- Optimización ---
+    num_cols = ['Unico', 'lastpage', 'lastpage_Parte2']; txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
+    num_ex = [c for c in num_cols if c in df_numerico_full.columns]; txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
+    try: df_numerico = df_numerico_full[num_ex]; df_textual = df_textual_full[txt_ex]
+    except KeyError as e: st.error(f"Columna esencial {e} no encontrada."); st.stop()
 
-
-    # --- INICIO VALIDACIONES (Mismo código V1-V8 que antes) ---
-    # (Asegúrate de copiar aquí el código de las validaciones V1 a V8
-    # de la versión anterior que funcionaba correctamente)
-    # Ejemplo V1:
+    # --- VALIDACIONES (V1-V8) ---
+    # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
-    filas_num, cols_num = df_numerico_full.shape; filas_txt, cols_txt = df_textual_full.shape
-    content_v1 += f"- Num: {filas_num}f x {cols_num}c<br>- Txt: {filas_txt}f x {cols_txt}c<br><br><b>Comparación:</b><br>"
-    if filas_num == filas_txt and cols_num == cols_txt: content_v1 += "<span class='status-correcto-inline'>[Correcto]</span> Coinciden."
+    fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
+    content_v1 += f"- Num: {fn} filas x {cn} columnas<br>- Txt: {ft} filas x {ct} columnas<br><br><b>Comparación:</b><br>"
+    if fn == ft and cn == ct: content_v1 += "<span class='status-correcto-inline'>[Correcto]</span> Coinciden."
     else: status_v1 = "Incorrecto"; content_v1 += "<span class='status-incorrecto-inline'>[Incorrecto]</span> Diferentes.<br>";
-    if filas_num != filas_txt: content_v1 += "- Filas.<br>"
-    if cols_num != cols_txt: content_v1 += "- Columnas.<br>"
+    if fn != ft: content_v1 += "- Filas.<br>"
+    if cn != ct: content_v1 += "- Columnas.<br>"
     validation_results.append({'key': key_v1, 'status': status_v1, 'content': content_v1})
 
-    # ... (Pegar aquí el resto de validaciones V2 a V8) ...
-    # --- Validación 2 ---
+    # V2: Orden IDs
     key_v2 = "Orden de Códigos Únicos"; content_v2 = ""; status_v2 = "Correcto"; col_num = 'Unico'; col_txt = '[auth]'
     try:
         cod_num = df_numerico[col_num]; cod_txt = df_textual[col_txt]
@@ -307,7 +330,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except KeyError as e: status_v2 = "Error"; content_v2 += f"<span class='status-error-inline'>[ERROR]</span> Col {e} no encontrada."
     validation_results.append({'key': key_v2, 'status': status_v2, 'content': content_v2})
 
-    # --- Validación 3 ---
+    # V3: lastpage
     key_v3 = "lastpage y lastpage_Parte2"; content_v3 = ""; status_v3 = "Correcto"; cols_v3 = ['lastpage', 'lastpage_Parte2']
     for col in cols_v3:
         content_v3 += f"<br><b>'{col}':</b><br>";
@@ -317,20 +340,26 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         else: status_v3 = "Incorrecto"; vals_str = ", ".join(map(str, vals)); content_v3 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Múltiples: {vals_str}<br>"
     validation_results.append({'key': key_v3, 'status': status_v3, 'content': content_v3})
 
-    # --- Validación 4 ---
+    # V4: Periodo Campo
     key_v4 = "Periodo Campo ('startdate')"; content_v4 = ""; status_v4 = "Info"; col_fecha = 'startdate'
+    locale_usado = ''; formato_fecha = '%d/%b/%Y %H:%M' # Default format
     try:
-        try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-        except: content_v4 += "[WARN] Locale ES no set.<br>"; locale.setlocale(locale.LC_TIME, '')
+        # Intentar configurar locale español silenciosamente
+        try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8'); locale_usado = 'es_ES'; formato_fecha = '%d de %B de %Y, %I:%M %p'
+        except:
+            try: locale.setlocale(locale.LC_TIME, 'es'); locale_usado = 'es'; formato_fecha = '%d de %B de %Y, %I:%M %p'
+            except: locale.setlocale(locale.LC_TIME, ''); locale_usado = 'Sistema' # Fallback silencioso
+
         if col_fecha not in df_textual.columns: raise KeyError(f"'{col_fecha}' ausente.")
         fechas = pd.to_datetime(df_textual[col_fecha], dayfirst=True, errors='coerce').dropna()
         if not fechas.empty:
-            f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo:</b><br> - Inicio: {f_min.strftime('%d/%b/%Y %H:%M')}<br> - Fin: {f_max.strftime('%d/%b/%Y %H:%M')}<br>"
+            f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo ({locale_usado}):</b><br> - Inicio: {f_min.strftime(formato_fecha)}<br> - Fin: {f_max.strftime(formato_fecha)}<br>"
         else: status_v4 = "Error"; content_v4 += "<span class='status-error-inline'>[ERROR]</span> No hay fechas.<br>"
     except KeyError as e: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR]</span> Col {e}.<br>"
+    except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
     validation_results.append({'key': key_v4, 'status': status_v4, 'content': content_v4})
 
-    # --- Validación 5 ---
+    # V5: Agrupaciones
     key_v5 = "Agrupaciones"; content_v5 = ""; status_v5 = "Correcto"
     # 5.1 Edad
     content_v5 += "<h3>5.1: Edad vs [age]</h3>"; col_g_edad = "Por favor, selecciona el rango de edad en el que te encuentras:"; col_d_edad = '[age]'
@@ -352,24 +381,27 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # 5.3 Geografía
     content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display})</h3>"; status_v5_3 = "Correcto"
     try:
-        clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna) # Usa la clave interna
+        clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
         if not clasif: raise ValueError(f"Clasif. no definida para '{pais_seleccionado_display}'")
-        col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD'
-        if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError("Region/Ciudad")
+        col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD' # Ajusta si los nombres de columna cambian por país
+        if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región ('{col_reg}') o Ciudad ('{col_ciu}') no encontradas.")
         err_reg = [];
+        # Usar iterrows puede ser lento en DFs grandes, pero es claro para este caso
         for idx, row in df_textual.iterrows():
             reg, ciu = row[col_reg], row[col_ciu]
             if pd.isna(reg) or pd.isna(ciu): continue
-            if reg in clasif:
-                if ciu not in clasif[reg]: err_reg.append({'idx': idx + 2, 'Reg': reg, 'Ciu': ciu, 'Err': f"'{ciu}' no en '{reg}'"})
-            else: err_reg.append({'idx': idx + 2, 'Reg': reg, 'Ciu': ciu, 'Err': f"'{reg}' no válida"})
+            if reg in clasif: # La región existe en la clasificación del país?
+                # La ciudad existe DENTRO de esa región?
+                if ciu not in clasif[reg]: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no pertenece a '{reg}'"})
+            else: # La región ni siquiera existe como clave
+                 err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida para {pais_seleccionado_display}"})
         if not err_reg: content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente."
         else: status_v5_3 = "Incorrecto"; content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg)} inconsistencias.<br>"; df_err = pd.DataFrame(err_reg); content_v5 += "Primeras 5:<br>" + df_err.head().to_html(classes='df-style', index=False)
     except (KeyError, ValueError) as e: status_v5_3 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     if status_v5 == "Correcto": status_v5 = status_v5_3
     validation_results.append({'key': key_v5, 'status': status_v5, 'content': content_v5})
 
-    # --- Validación 6 ---
+    # V6: Origen/Proveedor
     key_v6 = "Origen/Proveedor"; content_v6 = ""; status_v6 = "Info"; prov_cols = ['Origen', 'Proveedor']
     prov_col = next((col for col in prov_cols if col in df_textual.columns), None)
     if prov_col:
@@ -379,7 +411,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     else: content_v6 += f"[INFO] No encontrada."
     validation_results.append({'key': key_v6, 'status': status_v6, 'content': content_v6})
 
-    # --- Validación 7 ---
+    # V7: Nulos Base Numérica
     key_v7 = "Nulos Base Numérica"; content_v7 = ""; status_v7 = "Correcto"; id_unico = 'Unico'; cols_v7 = ['NSE', 'gender', 'AGErange', 'Region']
     nulos_det = []; no_enc = []; id_ok = id_unico in df_numerico_full.columns
     if not id_ok: content_v7 += f"<span class='status-error-inline'>[WARN]</span> Col '{id_unico}' no encontrada.<br>"
@@ -399,7 +431,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if status_v7 == "Correcto": content_v7 = f"<span class='status-correcto-inline'>[Correcto]</span> Columnas OK."
     validation_results.append({'key': key_v7, 'status': status_v7, 'content': content_v7})
 
-    # --- Validación 8 ---
+    # V8: Abiertas ('Menciona')
     key_v8 = "Abiertas ('Menciona')"; content_v8 = ""; status_v8 = "Info"
     try:
         id_auth = '[auth]';
@@ -407,12 +439,16 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         cols_m = [c for c in df_textual_full.columns if "menciona" in str(c).lower() and "mencionaste" not in str(c).lower()]; total_p = len(cols_m)
         if not cols_m: content_v8 = "No hay columnas 'menciona'."
         else:
-            melted = df_textual_full[[id_auth] + cols_m].melt(id_vars=[id_auth], var_name='Preg', value_name='Resp').dropna(subset=['Resp'])
-            if melted.empty: content_v8 = f"{total_p} columnas, sin respuestas."
+            # Asegurarse de renombrar 'value_name' a 'Respuesta' directamente en melt
+            melted = df_textual_full[[id_auth] + cols_m].melt(id_vars=[id_auth], var_name='Pregunta', value_name='Respuesta')
+            final_abiertas = melted.dropna(subset=['Respuesta'])
+            if final_abiertas.empty: content_v8 = f"{total_p} columnas, sin respuestas."
             else:
-                total_r = len(melted); content_v8 += f"<b>{total_p}</b> cols, <b>{total_r}</b> respuestas.<br><br>"; df_disp = melted[[id_auth, 'Resp']]
+                total_r = len(final_abiertas); content_v8 += f"<b>{total_p}</b> cols, <b>{total_r}</b> respuestas.<br><br>";
+                # Seleccionar y renombrar para display si es necesario (ya está hecho en melt)
+                df_disp = final_abiertas[[id_auth, 'Respuesta']]
                 if total_r > 500: content_v8 += f"(Primeras 500)<br>"; df_disp = df_disp.head(500)
-                content_v8 += df_disp.to_html(classes='df-style', index=False)
+                content_v8 += df_disp.to_html(classes='df-style', index=False) # Renderizar
     except Exception as e: status_v8 = "Error"; content_v8 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     validation_results.append({'key': key_v8, 'status': status_v8, 'content': content_v8})
 
@@ -422,65 +458,38 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.divider()
 
     # --- ÁREA DE REPORTE ESTILIZADO ---
-
-    # 2. Ordenar resultados y asignar números
-    # ... (mismo código de ordenamiento y numeración) ...
     sort_order = {'Correcto': 1, 'Incorrecto': 2, 'Error': 3, 'Info': 4}
     sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
     final_numbered_results = []
     for i, v in enumerate(sorted_results_temp):
-        new_title = f"Validación {i + 1}: {v['key']}"
-        final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
+        new_title = f"Validación {i + 1}: {v['key']}"; final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
 
-    # 3. Calcular el Resumen
-    # ... (mismo código de cálculo de resumen) ...
-    correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto')
-    incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
-    info_count = sum(1 for v in validation_results if v['status'] == 'Info')
-    error_count = sum(1 for v in validation_results if v['status'] == 'Error')
-    total_validations = correct_count + incorrect_count + error_count
-    correct_pct = (correct_count / total_validations * 100) if total_validations > 0 else 0
-    incorrect_pct = (incorrect_count / total_validations * 100) if total_validations > 0 else 0
+    correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
+    info_count = sum(1 for v in validation_results if v['status'] == 'Info'); error_count = sum(1 for v in validation_results if v['status'] == 'Error')
+    total_validations = correct_count + incorrect_count + error_count; correct_pct = (correct_count / total_validations * 100) if total_validations > 0 else 0; incorrect_pct = (incorrect_count / total_validations * 100) if total_validations > 0 else 0
 
-    # 4. Mostrar el Resumen con st.columns y st.metric
     st.subheader("--- RESUMEN DE VALIDACIÓN ---", divider='violet')
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("✅ Correctos", f"{correct_count}", f"{correct_pct:.1f}%")
-    col2.metric("❌ Incorrectos", f"{incorrect_count}", f"{incorrect_pct:.1f}%")
-    col3.metric("⚠️ Errores", f"{error_count}")
-    col4.metric("ℹ️ Reportes", f"{info_count}")
+    col1.metric("✅ Correctos", f"{correct_count}", f"{correct_pct:.1f}%"); col2.metric("❌ Incorrectos", f"{incorrect_count}", f"{incorrect_pct:.1f}%")
+    col3.metric("⚠️ Errores", f"{error_count}"); col4.metric("ℹ️ Reportes", f"{info_count}")
 
-    # Lista detallada en un expander
     with st.expander("Ver lista detallada de verificaciones", expanded=False):
-        summary_list_html = "<div class='summary-list'><ul>"
+        summary_list_html = "<div class='summary-list'><ul>";
         for v in final_numbered_results:
             icon = "✅" if v['status'] == 'Correcto' else "❌" if v['status'] == 'Incorrecto' else "⚠️" if v['status'] == 'Error' else "ℹ️"
             summary_list_html += f"<li>{icon} <strong>{v['title']}:</strong> <span class='status-{v['status'].lower()}-inline'>{v['status']}</span></li>"
-        summary_list_html += "</ul></div>"
-        st.markdown(summary_list_html, unsafe_allow_html=True)
+        summary_list_html += "</ul></div>"; st.markdown(summary_list_html, unsafe_allow_html=True)
 
     st.divider()
 
-    # 5. Mostrar el Reporte Detallado
     st.subheader("--- REPORTE DETALLADO ---", divider='violet')
     for v in final_numbered_results:
         status_class = f"status-{v['status'].lower()}"
-        content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:")
-        content_detalle = content_detalle.replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:")
-        content_detalle = content_detalle.replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
-        html_content = f"""
-        <div class='validation-box {status_class}'>
-            <h3>{v['title']}</h3>
-            {content_detalle.replace('<br>', '<br/>')}
-        </div>
-        """
+        content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
+        html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{content_detalle.replace('<br>', '<br/>')}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
     st.success("¡Validación completada!")
 
 else:
     st.info("Por favor, carga ambos archivos Excel para iniciar la validación.")
-
-# --- Footer Opcional (Comentado) ---
-# st.markdown("---")
-# st.caption("Validador Interno Atlantia")
