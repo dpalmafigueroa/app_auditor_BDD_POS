@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.1 Final (Incluye botones de descarga)
+# Versión Atlantia 2.2 para Streamlit (Correcciones menores UI)
 
 import streamlit as st
 import pandas as pd
@@ -9,12 +9,12 @@ import numpy as np # Para manejar tipos numéricos
 from io import BytesIO # Para crear Excel en memoria
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(layout="wide", page_title="Validador Atlantia")
+# Cambio Título 2
+st.set_page_config(layout="wide", page_title="Auditor de calidad de bases de datos")
 
 # --- Función para convertir DataFrame a Excel en memoria ---
 def to_excel(df):
     output = BytesIO()
-    # Usa 'xlsxwriter' o 'openpyxl'. openpyxl es más común con pandas.
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Reglas')
     processed_data = output.getvalue()
@@ -24,7 +24,7 @@ def to_excel(df):
 # (Mismo CSS de la versión anterior)
 atlantia_css = """
 <style>
-    /* ... (pega aquí TODO el CSS de la versión anterior 2.0) ... */
+    /* ... (pega aquí TODO el CSS de la versión anterior 2.1) ... */
      /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -237,18 +237,38 @@ st.markdown(atlantia_css, unsafe_allow_html=True)
 
 # --- HEADER PERSONALIZADO ---
 st.markdown('<div class="main-header-container">', unsafe_allow_html=True)
-st.markdown("""<div class="main-header"><svg class="atlantia-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="atlantiaGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#04D1CD"/><stop offset="50%" style="stop-color:#6546C3"/><stop offset="100%" style="stop-color:#AA49CA"/></linearGradient></defs><path d="M20,80 L50,20 L80,80 L65,80 L50,50 L35,80 Z" fill="url(#atlantiaGradient)" stroke="white" stroke-width="2"/></svg><h1 style="display: inline-block; vertical-align: middle;">Validador de Bases</h1><div class="subtitle">Powered by Atlantia</div></div>""", unsafe_allow_html=True)
+# Cambio Título 2
+st.markdown("""
+<div class="main-header">
+    <svg class="atlantia-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="atlantiaGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#04D1CD"/><stop offset="50%" style="stop-color:#6546C3"/><stop offset="100%" style="stop-color:#AA49CA"/></linearGradient></defs><path d="M20,80 L50,20 L80,80 L65,80 L50,50 L35,80 Z" fill="url(#atlantiaGradient)" stroke="white" stroke-width="2"/></svg>
+    <h1 style="display: inline-block; vertical-align: middle;">Auditor de calidad de bases de datos</h1>
+    <div class="subtitle">Powered by Atlantia</div>
+</div>
+""", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- INSTRUCCIONES ---
 st.markdown("## Instrucciones")
 st.markdown("""1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas y de volumetría.\n2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.""")
 st.markdown("### Evaluaciones Realizadas:")
-st.markdown("""* **Tamaño:** Compara filas y columnas.\n* **Orden de IDs:** Verifica `Unico` vs `[auth]`.\n* **Finalización (lastpage):** Revisa unicidad.\n* **Periodo de Campo:** Muestra fechas de `startdate`.\n* **Agrupaciones:** Edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).\n* **Origen/Proveedor:** Conteo por proveedor.\n* **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.\n* **Abiertas ('Menciona'):** Lista respuestas.\n* **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.\n* **Suma Ponderador x Demo:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.\n* **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.""")
+# Cambios Título 3, 4 y 5
+st.markdown("""
+* **Tamaño:** Compara filas y columnas.
+* **Orden de IDs:** Verifica `Unico` vs `[auth]`.
+* **Unico valor en (lastpage y lastpage2):** Revisa unicidad.
+* **Periodo de Campo:** Muestra fechas de `startdate`.
+* **Agrupaciones:** Rango de edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).
+* **Origen/Proveedor:** Conteo por proveedor.
+* **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.
+* **Abiertas ('Menciona'):** Lista respuestas.
+* **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.
+* **Suma Ponderador por demográfico:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.
+* **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
+""")
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
-# Clasificaciones geográficas
+# (Igual que V1.8, incluyendo El Salvador)
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
@@ -261,8 +281,8 @@ CLASIFICACIONES_POR_PAIS = {
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
-# Umbrales numéricos
 THRESHOLDS_POR_PAIS = {
+    # (Igual que V1.8)
     'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400}],
     'Colombia': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
     'Ecuador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
@@ -276,7 +296,7 @@ THRESHOLDS_POR_PAIS = {
     'Guatemala': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
     'Colombia Minors': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
 }
-paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys())) # Ordenar alfabéticamente
+paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys()))
 
 # --- SELECCIÓN DE PAÍS Y CARGA DE ARCHIVOS ---
 col_pais, col_vacia = st.columns([1, 2])
@@ -286,15 +306,15 @@ with col_pais:
 # --- Botones de Descarga ---
 st.markdown("### Descargar Reglas de Validación")
 col_dl1, col_dl2, col_dl_spacer = st.columns([2, 2, 3])
-# Botón Volumetría
+# Botón Volumetría (Cambio Título 1)
 with col_dl1:
     reglas_vol = THRESHOLDS_POR_PAIS.get(pais_seleccionado_display, [])
     if reglas_vol:
         df_vol = pd.DataFrame(reglas_vol); df_vol.columns = ['Columna', 'Condición', 'Límite']
         excel_vol = to_excel(df_vol)
-        st.download_button(label="📊 Descargar Reglas Volumetría (.xlsx)", data=excel_vol, file_name=f'reglas_volumetria_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_vol')
+        st.download_button(label="Descargar Reglas Volumetría (.xlsx)", data=excel_vol, file_name=f'reglas_volumetria_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_vol')
     else: st.info(f"No hay reglas de volumetría para {pais_seleccionado_display}.")
-# Botón Geografía
+# Botón Geografía (Cambio Título 1)
 with col_dl2:
     reglas_geo = CLASIFICACIONES_POR_PAIS.get(pais_seleccionado_display, {})
     if reglas_geo:
@@ -302,9 +322,9 @@ with col_dl2:
         if lista_g:
             df_geo = pd.DataFrame(lista_g)
             excel_geo = to_excel(df_geo)
-            st.download_button(label="🗺️ Descargar Reglas Geografía (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
+            st.download_button(label="Descargar Reglas Geografía (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
         else: st.info(f"No hay reglas geográficas detalladas para {pais_seleccionado_display}.")
-    else: st.info(f"No hay reglas geográficas definidas para {pais_seleccionado_display}.") # Si el país no está en CLASIFICACIONES...
+    else: st.info(f"No hay reglas geográficas definidas para {pais_seleccionado_display}.")
 
 st.divider()
 
@@ -336,8 +356,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada."); st.stop()
 
     # --- VALIDACIONES (V1-V11) ---
-    # (Pega aquí el código EXACTO de V1 a V11 de la versión anterior 1.9,
-    # asegurándote que V5.3 tenga el ajuste para países sin reglas)
+    # (Pega aquí el código EXACTO de V1 a V11 de la versión anterior 1.9)
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
