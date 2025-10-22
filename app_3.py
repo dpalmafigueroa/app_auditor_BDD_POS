@@ -1,17 +1,20 @@
 # --- validador_app.py ---
-# Versión Atlantia 1.2 para Streamlit (Ajustes UI, Locale, Dark Mode, México)
+# Versión Atlantia 1.4 para Streamlit (Añade Imagen Instrucciones, Confirma manejo duplicados V9)
 
 import streamlit as st
 import pandas as pd
 import locale
 import io # Para leer los archivos subidos
+import numpy as np # Para manejar tipos numéricos
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Validador Atlantia")
 
-# --- CSS PERSONALIZADO ATLANTIA + VALIDACIÓN + ADAPTATIVO (Revisado) ---
+# --- CSS PERSONALIZADO ---
+# (Mismo CSS de la versión anterior - Versión Atlantia 1.2/1.3)
 atlantia_css = """
 <style>
+    /* ... (pega aquí TODO el CSS de la versión anterior) ... */
     /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -88,7 +91,6 @@ atlantia_css = """
         font-family: 'Hind', sans-serif;
         color: var(--text-color);
     }
-    /* Asegurar fondo principal */
     .stApp { background-color: var(--bg-color); }
 
     /* Títulos Atlantia (Color fijo) */
@@ -98,8 +100,8 @@ atlantia_css = """
         color: var(--atlantia-violet) !important;
     }
     h1, .main-title { font-size: 24pt !important; }
-    h2, .section-title { font-size: 20pt !important; } /* Aplicado a st.subheader */
-    h3, .subsection-title { font-size: 16pt !important; } /* Usado para títulos dentro de validaciones */
+    h2, .section-title { font-size: 20pt !important; }
+    h3, .subsection-title { font-size: 16pt !important; }
 
     /* Labels Atlantia (Color fijo) */
     .stSelectbox label, .stTextInput label, .stTextArea label, .stFileUploader label,
@@ -178,20 +180,20 @@ atlantia_css = """
     .validation-box h3 { border-bottom: 1px solid var(--input-border-color); color: var(--atlantia-violet); } /* Título principal violeta */
     .validation-box h3.sub-heading { color: var(--text-color-subtle); border-bottom-style: dotted; }
 
-    /* Estados de Validación */
+    /* Estados */
     .status-correcto { background-color: var(--validation-correct-bg); border-left-color: var(--validation-correct-border); }
-    .status-correcto h3, .status-correcto span, .status-correcto p, .status-correcto li { color: var(--validation-correct-text) !important; } /* Aplicar a más elementos */
+    .status-correcto h3, .status-correcto span, .status-correcto p, .status-correcto li { color: var(--validation-correct-text) !important; }
     .status-correcto-inline { color: var(--validation-correct-text) !important; font-weight: bold; }
 
     .status-incorrecto { background-color: var(--validation-incorrect-bg); border-left-color: var(--validation-incorrect-border); }
-    .status-incorrecto h3, .status-incorrecto span, .status-incorrecto p, .status-incorrecto li { color: var(--validation-incorrect-text) !important; }
+    .status-incorrecto h3, .status-incorrecto span, .status-incorrecto p, .status-incorrecto li, .status-incorrecto .df-style th, .status-incorrecto .df-style td { color: var(--validation-incorrect-text) !important; }
     .status-incorrecto-inline { color: var(--validation-incorrect-text) !important; font-weight: bold; }
 
     .status-info { background-color: var(--validation-info-bg); border-left-color: var(--validation-info-border); }
-    .status-info h3, .status-info span, .status-info p, .status-info li { color: var(--validation-info-text) !important; }
+    .status-info h3, .status-info span, .status-info p, .status-info li, .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; }
 
     .status-error { background-color: var(--validation-error-bg); border-left-color: var(--validation-error-border); }
-    .status-error h3, .status-error span, .status-error p, .status-error li { color: var(--validation-error-text) !important; }
+    .status-error h3, .status-error span, .status-error p, .status-error li, .status-error .df-style th, .status-error .df-style td { color: var(--validation-error-text) !important; }
     .status-error-inline { color: var(--validation-error-text) !important; font-weight: bold; }
 
      /* Tablas dentro de validación */
@@ -199,13 +201,19 @@ atlantia_css = """
     .df-style th, .df-style td { border: 1px solid var(--table-border-color); padding: 6px; color: var(--text-color) !important; }
     .df-style th { background-color: var(--table-header-bg); text-align: left; }
     .df-style tr:nth-child(even) { background-color: var(--table-row-even-bg); }
+    /* Override para tablas dentro de cajas de estado */
+    .status-incorrecto .df-style th, .status-incorrecto .df-style td { color: var(--validation-incorrect-text) !important; border-color: rgba(183, 28, 28, 0.3); }
+    .status-incorrecto .df-style th { background-color: rgba(183, 28, 28, 0.1); }
+    .status-error .df-style th, .status-error .df-style td { color: var(--validation-error-text) !important; border-color: rgba(230, 81, 0, 0.3); }
+    .status-error .df-style th { background-color: rgba(230, 81, 0, 0.1); }
+    .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; border-color: rgba(13, 71, 161, 0.3); }
+    .status-info .df-style th { background-color: rgba(13, 71, 161, 0.1); }
+
 
     /* Resumen Lista */
     .summary-list ul { list-style-type: none; padding-left: 0; }
     .summary-list li { padding: 5px 0; border-bottom: 1px dotted var(--input-border-color); }
     .summary-list li strong { color: var(--atlantia-violet); }
-
-    /* --- FIN ESTILOS VALIDACIÓN --- */
 
     /* Header principal */
     .main-header-container { margin-bottom: 2rem; }
@@ -214,6 +222,19 @@ atlantia_css = """
     .main-header .subtitle { color: rgba(255, 255, 255, 0.9) !important; font-family: 'Poppins', sans-serif !important; font-weight: 500 !important; font-size: 14pt !important; margin-top: 0; }
     .atlantia-logo { width: 40px; height: auto; vertical-align: middle; margin-right: 0.5rem; }
 
+    /* Estilo para la imagen de umbrales */
+    .threshold-image {
+        border: 1px solid var(--input-border-color);
+        border-radius: 8px;
+        padding: 5px;
+        background-color: var(--widget-bg);
+        margin-top: 10px;
+        max-width: 100%; /* Asegurar que no se desborde */
+        height: auto; /* Mantener proporción */
+        display: block; /* Centrar si es necesario con margin: auto */
+        margin-left: auto;
+        margin-right: auto;
+    }
 </style>
 """
 st.markdown(atlantia_css, unsafe_allow_html=True)
@@ -241,39 +262,62 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- INSTRUCCIONES ---
 st.markdown("## Instrucciones")
 st.markdown("""
-1.  **Selecciona el país** para el cual se realizará la validación geográfica.
+1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas y de umbrales.
 2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.
 """)
 
 st.markdown("### Evaluaciones Realizadas:")
 st.markdown("""
-* **Tamaño:** Compara si ambas bases tienen el mismo número de filas y columnas.
-* **Orden de IDs:** Verifica que los identificadores únicos (`Unico` vs `[auth]`) estén en el mismo orden.
-* **Finalización (lastpage):** Revisa que las columnas `lastpage` y `lastpage_Parte2` tengan un único valor.
-* **Periodo de Campo:** Muestra la fecha de inicio y fin basada en la columna `startdate`.
-* **Agrupaciones:**
-    * **Edad:** Compara rangos de edad con la edad numérica (`[age]`).
-    * **NSE:** Cruza `NSE` vs `NSE2` para verificar consistencia.
-    * **Geografía:** Valida que las ciudades pertenezcan a la región correcta según el país seleccionado.
-* **Origen/Proveedor:** Muestra el conteo de encuestas por proveedor.
-* **Nulos (Numérica):** Busca celdas vacías en columnas clave (`NSE`, `gender`, `AGErange`, `Region`) y reporta los IDs afectados.
-* **Abiertas ('Menciona'):** Extrae y lista las respuestas de columnas que contienen la palabra "menciona".
+* **Tamaño:** Compara filas y columnas de ambas bases.
+* **Orden de IDs:** Verifica `Unico` vs `[auth]`.
+* **Finalización (lastpage):** Revisa unicidad de valores.
+* **Periodo de Campo:** Muestra fechas de `startdate`.
+* **Agrupaciones:** Edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).
+* **Origen/Proveedor:** Conteo por proveedor.
+* **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region` y reporta IDs.
+* **Abiertas ('Menciona'):** Lista respuestas de columnas "menciona".
+* **Umbrales (Numérica):** Valida columnas específicas contra límites definidos por país (ver tabla).
 """)
+
+# --- [NUEVO] Mostrar imagen de umbrales ---
+# Asumiendo que guardaste la imagen como 'umbrales_condiciones.png' en la misma carpeta que tu script .py
+try:
+    # Ajusta el nombre del archivo si es diferente
+    st.image("image_0d3ed0.png", caption="Tabla de Referencia para Validación de Umbrales", use_column_width=True)
+    # Añadir clase CSS a la imagen (opcional, para estilizarla si quieres)
+    st.markdown('<style>.stImage > img { border-radius: 8px; border: 1px solid var(--input-border-color); background-color: var(--widget-bg); padding: 5px; }</style>', unsafe_allow_html=True)
+except FileNotFoundError:
+    st.warning("Advertencia: No se encontró la imagen 'image_0d3ed0.png' para mostrar la tabla de umbrales.")
+except Exception as img_e:
+    st.warning(f"No se pudo cargar la imagen de umbrales: {img_e}")
+
+
 st.divider()
 
-# --- CONFIGURACIÓN FIJA (Clasificaciones de país) ---
+# --- CONFIGURACIÓN DE REGLAS ---
+# Clasificaciones geográficas
 CLASIFICACIONES_POR_PAIS = {
-    'Panamá': {
-        'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],
-        'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],
-        'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']
-    },
-    'México': {
-        'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],
-        'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],
-        'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],
-        'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']
-    }
+    'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
+    'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
+    # Añadir entradas vacías para los otros países para que aparezcan en el selector
+    'Colombia': {}, 'Ecuador': {}, 'Perú': {}, 'R. Dominicana': {}, 'Honduras': {},
+    'El Salvador': {}, 'Costa Rica': {}, 'Puerto Rico': {}, 'Guatemala': {}, 'Colombia Minors': {}
+}
+# Umbrales numéricos
+THRESHOLDS_POR_PAIS = {
+    # Mismo diccionario THRESHOLDS_POR_PAIS que en la versión anterior
+    'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400}],
+    'Colombia': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Ecuador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Perú': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'R. Dominicana': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Ron', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Whisky', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Honduras': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'El Salvador': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Costa Rica': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Puerto Rico': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Panamá': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Guatemala': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
+    'Colombia Minors': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
 }
 paises_disponibles = list(CLASIFICACIONES_POR_PAIS.keys())
 
@@ -289,28 +333,27 @@ with col2_up: uploaded_file_txt = st.file_uploader("Carga el archivo Textual", t
 
 # --- LÓGICA DE VALIDACIÓN ---
 if uploaded_file_num is not None and uploaded_file_txt is not None:
+    # ... (resto del código igual, incluyendo carga, optimización y V1-V8) ...
     st.info(f"Archivos cargados. Iniciando validación para **{pais_seleccionado_display}**...")
     st.divider()
-
     pais_clave_interna = pais_seleccionado_display
     validation_results = []
-
-    # --- Carga ---
+    # Carga y Optimización
     try:
         df_numerico_full = pd.read_excel(io.BytesIO(uploaded_file_num.getvalue()))
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
     except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
-    # --- Optimización ---
     num_cols = ['Unico', 'lastpage', 'lastpage_Parte2']; txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
     num_ex = [c for c in num_cols if c in df_numerico_full.columns]; txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
     try: df_numerico = df_numerico_full[num_ex]; df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna esencial {e} no encontrada."); st.stop()
 
     # --- VALIDACIONES (V1-V8) ---
+    # (Pega aquí el código de V1 a V8 de la versión anterior)
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
-    content_v1 += f"- Num: {fn} filas x {cn} columnas<br>- Txt: {ft} filas x {ct} columnas<br><br><b>Comparación:</b><br>"
+    content_v1 += f"- Num: {fn} filas x {cn} columnas<br>- Txt: {ft} filas x {ct} columnas<br><br><b>Comparación:</b><br>" # Texto cambiado
     if fn == ft and cn == ct: content_v1 += "<span class='status-correcto-inline'>[Correcto]</span> Coinciden."
     else: status_v1 = "Incorrecto"; content_v1 += "<span class='status-incorrecto-inline'>[Incorrecto]</span> Diferentes.<br>";
     if fn != ft: content_v1 += "- Filas.<br>"
@@ -320,6 +363,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # V2: Orden IDs
     key_v2 = "Orden de Códigos Únicos"; content_v2 = ""; status_v2 = "Correcto"; col_num = 'Unico'; col_txt = '[auth]'
     try:
+        # Asegurarse que las columnas existan antes de accederlas
+        if col_num not in df_numerico.columns: raise KeyError(f"{col_num} (Numérica)")
+        if col_txt not in df_textual.columns: raise KeyError(f"{col_txt} (Textual)")
         cod_num = df_numerico[col_num]; cod_txt = df_textual[col_txt]
         if len(cod_num) != len(cod_txt): status_v2 = "Incorrecto"; content_v2 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Filas no coinciden.<br>Num:{len(cod_num)}, Txt:{len(cod_txt)}<br>(Error V1)"
         elif cod_num.equals(cod_txt): content_v2 += f"<span class='status-correcto-inline'>[Correcto]</span> Orden idéntico."
@@ -342,18 +388,15 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
     # V4: Periodo Campo
     key_v4 = "Periodo Campo ('startdate')"; content_v4 = ""; status_v4 = "Info"; col_fecha = 'startdate'
-    locale_usado = ''; formato_fecha = '%d/%b/%Y %H:%M' # Default format
+    locale_usado = ''; formato_fecha = '%d/%b/%Y %H:%M'
     try:
-        # Intentar configurar locale español silenciosamente
         try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8'); locale_usado = 'es_ES'; formato_fecha = '%d de %B de %Y, %I:%M %p'
         except:
             try: locale.setlocale(locale.LC_TIME, 'es'); locale_usado = 'es'; formato_fecha = '%d de %B de %Y, %I:%M %p'
-            except: locale.setlocale(locale.LC_TIME, ''); locale_usado = 'Sistema' # Fallback silencioso
-
+            except: locale.setlocale(locale.LC_TIME, ''); locale_usado = 'Sistema'
         if col_fecha not in df_textual.columns: raise KeyError(f"'{col_fecha}' ausente.")
         fechas = pd.to_datetime(df_textual[col_fecha], dayfirst=True, errors='coerce').dropna()
-        if not fechas.empty:
-            f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo ({locale_usado}):</b><br> - Inicio: {f_min.strftime(formato_fecha)}<br> - Fin: {f_max.strftime(formato_fecha)}<br>"
+        if not fechas.empty: f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo ({locale_usado}):</b><br> - Inicio: {f_min.strftime(formato_fecha)}<br> - Fin: {f_max.strftime(formato_fecha)}<br>"
         else: status_v4 = "Error"; content_v4 += "<span class='status-error-inline'>[ERROR]</span> No hay fechas.<br>"
     except KeyError as e: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR]</span> Col {e}.<br>"
     except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
@@ -382,23 +425,22 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display})</h3>"; status_v5_3 = "Correcto"
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
-        if not clasif: raise ValueError(f"Clasif. no definida para '{pais_seleccionado_display}'")
-        col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD' # Ajusta si los nombres de columna cambian por país
-        if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región ('{col_reg}') o Ciudad ('{col_ciu}') no encontradas.")
-        err_reg = [];
-        # Usar iterrows puede ser lento en DFs grandes, pero es claro para este caso
-        for idx, row in df_textual.iterrows():
-            reg, ciu = row[col_reg], row[col_ciu]
-            if pd.isna(reg) or pd.isna(ciu): continue
-            if reg in clasif: # La región existe en la clasificación del país?
-                # La ciudad existe DENTRO de esa región?
-                if ciu not in clasif[reg]: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no pertenece a '{reg}'"})
-            else: # La región ni siquiera existe como clave
-                 err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida para {pais_seleccionado_display}"})
-        if not err_reg: content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente."
-        else: status_v5_3 = "Incorrecto"; content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg)} inconsistencias.<br>"; df_err = pd.DataFrame(err_reg); content_v5 += "Primeras 5:<br>" + df_err.head().to_html(classes='df-style', index=False)
+        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info'>[INFO]</span> No hay reglas geográficas definidas para {pais_seleccionado_display}."
+        else:
+            col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD'
+            if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región ('{col_reg}') o Ciudad ('{col_ciu}') no encontradas.")
+            err_reg = [];
+            for idx, row in df_textual.iterrows():
+                reg, ciu = row[col_reg], row[col_ciu]
+                if pd.isna(reg) or pd.isna(ciu): continue
+                if reg in clasif:
+                    if ciu not in clasif[reg]: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{reg}'"})
+                else: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida"})
+            if not err_reg: content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente."
+            else: status_v5_3 = "Incorrecto"; content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg)} inconsistencias.<br>"; df_err = pd.DataFrame(err_reg); content_v5 += "Primeras 5:<br>" + df_err.head().to_html(classes='df-style', index=False)
     except (KeyError, ValueError) as e: status_v5_3 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
-    if status_v5 == "Correcto": status_v5 = status_v5_3
+    if status_v5 == "Correcto" and status_v5_3 != "Info": status_v5 = status_v5_3
+    elif status_v5_3 == "Error": status_v5 = "Error"
     validation_results.append({'key': key_v5, 'status': status_v5, 'content': content_v5})
 
     # V6: Origen/Proveedor
@@ -439,18 +481,55 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         cols_m = [c for c in df_textual_full.columns if "menciona" in str(c).lower() and "mencionaste" not in str(c).lower()]; total_p = len(cols_m)
         if not cols_m: content_v8 = "No hay columnas 'menciona'."
         else:
-            # Asegurarse de renombrar 'value_name' a 'Respuesta' directamente en melt
             melted = df_textual_full[[id_auth] + cols_m].melt(id_vars=[id_auth], var_name='Pregunta', value_name='Respuesta')
             final_abiertas = melted.dropna(subset=['Respuesta'])
             if final_abiertas.empty: content_v8 = f"{total_p} columnas, sin respuestas."
             else:
                 total_r = len(final_abiertas); content_v8 += f"<b>{total_p}</b> cols, <b>{total_r}</b> respuestas.<br><br>";
-                # Seleccionar y renombrar para display si es necesario (ya está hecho en melt)
                 df_disp = final_abiertas[[id_auth, 'Respuesta']]
                 if total_r > 500: content_v8 += f"(Primeras 500)<br>"; df_disp = df_disp.head(500)
-                content_v8 += df_disp.to_html(classes='df-style', index=False) # Renderizar
+                df_disp.columns = [id_auth, 'Respuesta']
+                content_v8 += df_disp.to_html(classes='df-style', index=False)
     except Exception as e: status_v8 = "Error"; content_v8 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     validation_results.append({'key': key_v8, 'status': status_v8, 'content': content_v8})
+
+    # V9: Umbrales Numéricos
+    key_v9 = "Umbrales Numéricos"; content_v9 = ""; status_v9 = "Correcto"; id_unico = 'Unico'
+    errores_umbrales = []
+    reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
+    if not reglas_pais:
+        status_v9 = "Info"; content_v9 = f"[INFO] No hay reglas de umbrales para {pais_seleccionado_display}."
+    else:
+        id_col_ok_v9 = id_unico in df_numerico_full.columns
+        if not id_col_ok_v9: content_v9 += f"<span class='status-error-inline'>[WARN]</span> Col '{id_unico}' no encontrada.<br>"
+        for regla in reglas_pais:
+            col = regla['col']; cond = regla['cond']; lim = regla['lim']
+            # Pandas maneja duplicados añadiendo .1, .2 etc. Al buscar por 'col', solo encontrará la primera.
+            if col not in df_numerico_full.columns:
+                errores_umbrales.append({'Columna': col, 'Error': 'Columna no encontrada', 'ID': '-', 'Valor': '-'})
+                if status_v9 != "Error": status_v9 = "Error"; continue
+            try: col_numerica = pd.to_numeric(df_numerico_full[col], errors='coerce')
+            except Exception: errores_umbrales.append({'Columna': col, 'Error': 'No numérico', 'ID': '-', 'Valor': '-'}); if status_v9 != "Error": status_v9 = "Error"; continue
+            violaciones = pd.Series(False, index=df_numerico_full.index); cond_desc = ""
+            if cond == 'mayor_a': violaciones = col_numerica.gt(lim) & col_numerica.notna(); cond_desc = f"ser > {lim}"
+            elif cond == 'igual_a': violaciones = col_numerica.eq(lim) & col_numerica.notna(); cond_desc = f"ser == {lim}"
+            else: errores_umbrales.append({'Columna': col, 'Error': f'Cond "{cond}" no reconocida', 'ID': '-', 'Valor': '-'}); if status_v9 != "Error": status_v9 = "Error"; continue
+            df_violaciones = df_numerico_full.loc[violaciones]
+            if not df_violaciones.empty:
+                if status_v9 == "Correcto": status_v9 = "Incorrecto"
+                for idx, row in df_violaciones.iterrows():
+                    uid = row[id_unico] if id_col_ok_v9 else f"Fila {idx+2}"
+                    valor_violador = row[col];
+                    try: valor_violador = f"{float(valor_violador):.2f}"
+                    except: valor_violador = str(valor_violador)
+                    errores_umbrales.append({'Columna': col, 'Error': f'Valor {valor_violador} viola regla no {cond_desc}', 'ID': uid, 'Valor': valor_violador})
+        if status_v9 == "Correcto": content_v9 = f"<span class='status-correcto-inline'>[Correcto]</span> Cumplen umbrales."
+        elif status_v9 == "Incorrecto" or status_v9 == "Error":
+             if status_v9 == "Incorrecto": content_v9 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Valores fuera de umbral:<br>"
+             if status_v9 == "Error": content_v9 += f"<span class='status-error-inline'>[ERROR]</span> Errores en validación:<br>"
+             df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]
+             content_v9 += df_errores.to_html(classes='df-style', index=False)
+    validation_results.append({'key': key_v9, 'status': status_v9, 'content': content_v9})
 
     # --- FIN VALIDACIONES ---
 
