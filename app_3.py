@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.3 para Streamlit (Validaciones V12 y V13)
+# Versión Atlantia 2.5 para Streamlit (Validación Dual Geográfica Perú)
 
 import streamlit as st
 import pandas as pd
@@ -9,7 +9,6 @@ import numpy as np # Para manejar tipos numéricos
 from io import BytesIO # Para crear Excel en memoria
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-# Cambio Título 2
 st.set_page_config(layout="wide", page_title="Auditor de calidad de bases de datos")
 
 # --- Función para convertir DataFrame a Excel en memoria ---
@@ -237,7 +236,6 @@ st.markdown(atlantia_css, unsafe_allow_html=True)
 
 # --- HEADER PERSONALIZADO ---
 st.markdown('<div class="main-header-container">', unsafe_allow_html=True)
-# Cambio Título 2
 st.markdown("""
 <div class="main-header">
     <svg class="atlantia-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="atlantiaGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#04D1CD"/><stop offset="50%" style="stop-color:#6546C3"/><stop offset="100%" style="stop-color:#AA49CA"/></linearGradient></defs><path d="M20,80 L50,20 L80,80 L65,80 L50,50 L35,80 Z" fill="url(#atlantiaGradient)" stroke="white" stroke-width="2"/></svg>
@@ -251,13 +249,12 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("## Instrucciones")
 st.markdown("""1.  **Selecciona el país** para el cual se aplicarán las reglas geográficas y de volumetría.\n2.  **Carga los archivos Excel** correspondientes a la base numérica y textual.""")
 st.markdown("### Evaluaciones Realizadas:")
-# Cambios Título 3, 4 y 5
 st.markdown("""
 * **Tamaño:** Compara filas y columnas.
 * **Orden de IDs:** Verifica `Unico` vs `[auth]`.
 * **Unico valor en (lastpage y lastpage2):** Revisa unicidad.
 * **Periodo de Campo:** Muestra fechas de `startdate`.
-* **Agrupaciones:** Rango de edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad).
+* **Agrupaciones:** Rango de edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad). (Perú incluye validación `region2`).
 * **Origen/Proveedor:** Conteo por proveedor.
 * **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.
 * **Abiertas ('Menciona'):** Lista respuestas.
@@ -270,7 +267,6 @@ st.markdown("""
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
-# (Igual que V1.8, incluyendo El Salvador)
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
@@ -283,6 +279,17 @@ CLASIFICACIONES_POR_PAIS = {
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
+
+# (NUEVO) REGLAS ADICIONALES PARA PERÚ (REGION2)
+CLASIFICACIONES_PERU_REGION2 = {
+    'REGIÓN LIMA': ['Lima', 'Callao'],
+    'REGIÓN NORTE': ['La Libertad', 'Lambayeque', 'Piura'],
+    'REGIÓN CENTRO': ['Junín'],
+    'REGIÓN SUR': ['Arequipa', 'Cuzco'],
+    'REGIÓN ORIENTE': ['Loreto']
+}
+# ---
+
 THRESHOLDS_POR_PAIS = {
     # (Igual que V1.8)
     'México': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000}, {'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 5000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400}],
@@ -299,6 +306,52 @@ THRESHOLDS_POR_PAIS = {
     'Colombia Minors': [{'col': 'Total_consumo', 'cond': 'mayor_a', 'lim': 11000},{'col': 'Total_consumo', 'cond': 'igual_a', 'lim': 0},{'col': 'Beer', 'cond': 'mayor_a', 'lim': 7000},{'col': 'Wine', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Spirits', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Other_alc', 'cond': 'mayor_a', 'lim': 1400},{'col': 'CSDs', 'cond': 'mayor_a', 'lim': 3000},{'col': 'Energy_drinks', 'cond': 'mayor_a', 'lim': 1400},{'col': 'Malts', 'cond': 'mayor_a', 'lim': 2000}],
 }
 paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys()))
+
+# --- (ACTUALIZADO) MAPEO DINÁMICO DE COLUMNAS ---
+# Basado en el CSV provisto. La "key" es el nombre estándar (usado en el script, coincide con Panamá).
+# El valor es un dict de los nombres específicos por país.
+COLUMN_MAPPING = {
+    'Base Numérica': {
+        'Unico': {'Panamá': 'Unico', 'México': 'Unico', 'Colombia': 'Unico', 'Ecuador': 'Unico', 'Perú': 'Unico', 'R. Dominicana': 'Unico', 'Honduras': 'Unico', 'El Salvador': 'Unico', 'Guatemala': 'Unico', 'Colombia Minors': 'id'},
+        'lastpage': {'Panamá': 'lastpage', 'México': 'lastpage', 'Colombia': 'lastpage', 'Ecuador': 'lastpage', 'Perú': 'lastpage', 'R. Dominicana': 'lastpage', 'Honduras': 'lastpage', 'El Salvador': 'lastpage', 'Guatemala': 'lastpage', 'Colombia Minors': 'lastpage'},
+        'lastpage_Parte2': {'Panamá': 'lastpage_Parte2', 'México': 'lastpage_Parte2', 'Colombia': 'lastpage_Parte2', 'Ecuador': 'lastpage_Parte2', 'Perú': 'lastpage_Parte2', 'R. Dominicana': 'lastpage_Parte2', 'Honduras': 'lastpage_Parte2', 'El Salvador': 'lastpage_Parte2', 'Guatemala': 'lastpage_Parte2', 'Colombia Minors': ''},
+        'Ponderador': {'Panamá': 'Ponderador', 'México': 'Ponderador', 'Colombia': 'Ponderador', 'Ecuador': 'Ponderador', 'Perú': 'Ponderador', 'R. Dominicana': 'Ponderador', 'Honduras': 'Ponderador', 'El Salvador': 'Ponderador', 'Guatemala': 'Ponderador', 'Colombia Minors': ''},
+        'NSE': {'Panamá': 'NSE', 'México': 'NSE', 'Colombia': 'NSE', 'Ecuador': 'NSE', 'Perú': 'NSE', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE', 'Colombia Minors': 'NSE'},
+        'gender': {'Panamá': 'gender', 'México': 'gender', 'Colombia': 'gender', 'Ecuador': 'gender', 'Perú': 'gender', 'R. Dominicana': 'gender', 'Honduras': 'gender', 'El Salvador': 'gender', 'Guatemala': 'gender', 'Colombia Minors': 'gender'},
+        'AGErange': {'Panamá': 'AGErange', 'México': 'AGErange', 'Colombia': 'AGErange', 'Ecuador': 'AGErange', 'Perú': 'AGErange', 'R. Dominicana': 'AGErange', 'Honduras': 'AGErange', 'El Salvador': 'AGErange', 'Guatemala': 'AGErange', 'Colombia Minors': 'AGErange'},
+        'Region': {'Panamá': 'Region', 'México': 'region', 'Colombia': 'region', 'Ecuador': 'region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'region', 'El Salvador': 'region', 'Guatemala': 'region', 'Colombia Minors': 'region'},
+        'Total_consumo': {'Panamá': 'Total_consumo', 'México': 'Total_consumo', 'Colombia': 'Total_consumo', 'Ecuador': 'Total_consumo', 'Perú': 'Total_consumo', 'R. Dominicana': 'Total_consumo', 'Honduras': 'Total_consumo', 'El Salvador': 'Total_consumo', 'Guatemala': 'Total_consumo', 'Colombia Minors': 'Total_consumo'},
+        'Beer': {'Panamá': 'Beer', 'México': 'Beer', 'Colombia': 'Beer', 'Ecuador': 'Beer', 'Perú': 'Beer', 'R. Dominicana': 'Beer', 'Honduras': 'Beer', 'El Salvador': 'Beer', 'Guatemala': 'Beer', 'Colombia Minors': ''},
+        'Wine': {'Panamá': 'Wine', 'México': 'Wine', 'Colombia': 'Wine', 'Ecuador': 'Wine', 'Perú': 'Wine', 'R. Dominicana': 'Wine', 'Honduras': 'Wine', 'El Salvador': 'Wine', 'Guatemala': 'Wine', 'Colombia Minors': ''},
+        'Ron': {'R. Dominicana': 'Rum'}, # Mapeo manual para RD (key 'Ron' usada en THRESHOLDS)
+        'Whisky': {'R. Dominicana': 'Wiskey'}, # Mapeo manual para RD (key 'Whisky' usada en THRESHOLDS)
+        'Spirits': {'Panamá': 'Spirits', 'México': 'Spirits', 'Colombia': 'Spirits', 'Ecuador': 'Spirits', 'Perú': 'Spirits', 'R. Dominicana': 'Spirits', 'Honduras': 'Spirits', 'El Salvador': 'Spirits', 'Guatemala': 'Spirits', 'Colombia Minors': ''},
+        'Other_alc': {'Panamá': 'Other_alc', 'México': 'Other_alc', 'Colombia': 'Other_alc', 'Ecuador': 'Other_alc', 'Perú': 'Other_alc', 'R. Dominicana': 'Other_alc', 'Honduras': 'Other_alc', 'El Salvador': 'Other_alc', 'Guatemala': 'Other_alc', 'Colombia Minors': ''},
+        'CSDs': {'Panamá': 'CSDs', 'México': 'CSDs', 'Colombia': 'CSDs', 'Ecuador': 'CSDs', 'Perú': 'CSDs', 'R. Dominicana': 'CSDs', 'Honduras': 'CSDs', 'El Salvador': 'CSDs', 'Guatemala': 'CSDs', 'Colombia Minors': 'CSDs'},
+        'Energy_drinks': {'Panamá': 'Energy_drinks', 'México': 'Energy_drinks', 'Colombia': 'Energy_drinks', 'Ecuador': 'Energy_drinks', 'Perú': 'Energy_drinks', 'R. Dominicana': 'Energy_drinks', 'Honduras': 'Energy_drinks', 'El Salvador': 'Energy_drinks', 'Guatemala': 'Energy_drinks', 'Colombia Minors': 'Energy_drinks'},
+        'Malts': {'Panamá': 'Malts', 'México': '', 'Colombia': 'Malts', 'Ecuador': 'Malts', 'Perú': 'Malts', 'R. Dominicana': 'Malts', 'Honduras': 'Malts', 'El Salvador': 'Malts', 'Guatemala': 'Malts', 'Colombia Minors': 'Malts'},
+        'RTD_Cider': {'Panamá': 'RTD_Cider', 'México': 'RTD_Cider', 'Colombia': 'RTD_Cider', 'Ecuador': 'RTD_Cider', 'Perú': 'RTD_Cider', 'R. Dominicana': 'RTD_Cider', 'Honduras': 'RTD_Cider', 'El Salvador': 'RTD_Cider', 'Guatemala': 'RTD_Cider', 'Colombia Minors': ''},
+        'Hard_Seltzer': {'Panamá': 'Hard_Seltzer', 'México': 'Hard_Seltzer', 'Colombia': 'Hard_Seltzer', 'Ecuador': 'Hard_Seltzer', 'Perú': 'Hard_Seltzer', 'R. Dominicana': 'Hard_Seltzer', 'Honduras': 'Hard_Seltzer', 'El Salvador': 'Hard_Seltzer', 'Guatemala': 'Hard_Seltzer', 'Colombia Minors': ''},
+        'Bottled_water': {'Panamá': 'Bottled_water', 'México': 'Bottled_water', 'Colombia': 'Bottled_water', 'Ecuador': 'Bottled_water', 'Perú': 'Bottled_water', 'R. Dominicana': 'Bottled_water', 'Honduras': 'Bottled_water', 'El Salvador': 'Bottled_water', 'Guatemala': 'Bottled_water', 'Colombia Minors': 'Bottled_water'},
+        'NABs': {'Panamá': 'NABs', 'México': 'NABs', 'Colombia': 'NABs', 'Ecuador': 'NABs', 'Perú': 'NABs', 'R. Dominicana': 'NABs', 'Honduras': 'NABs', 'El Salvador': 'NABs', 'Guatemala': 'NABs', 'Colombia Minors': 'NABs'},
+        'Alcohol': {'Panamá': 'Alcohol', 'México': '', 'Colombia': 'Alcohol', 'Ecuador': 'Alcohol', 'Perú': 'Alcohol', 'R. Dominicana': 'Alcohol', 'Honduras': 'Alcohol', 'El Salvador': '', 'Guatemala': 'Alcohol', 'Colombia Minors': ''},
+    },
+    'Base Textual': {
+        '[auth]': {'Panamá': '[auth]', 'México': '[auth]', 'Colombia': '[auth]', 'Ecuador': '[auth]', 'Perú': '[auth]', 'R. Dominicana': '[auth]', 'Honduras': '[auth]', 'El Salvador': '[auth]', 'Guatemala': '[auth]', 'Colombia Minors': 'id'},
+        'startdate': {'Panamá': 'startdate', 'México': 'startdate', 'Colombia': 'startdate', 'Ecuador': 'startdate', 'Perú': 'startdate', 'R. Dominicana': 'startdate', 'Honduras': 'startdate', 'El Salvador': 'startdate', 'Guatemala': 'startdate', 'Colombia Minors': 'startdate'},
+        'Por favor, selecciona el rango de edad en el que te encuentras:': {'Panamá': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'México': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Ecuador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Perú': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'R. Dominicana': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Honduras': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'El Salvador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Guatemala': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia Minors': 'AGErange'},
+        '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', 'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
+        'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
+        'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
+        'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', 'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
+        'Region2': {'Perú': 'region2'}, # (NUEVO) Mapeo para la segunda región de Perú
+        'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Region', 'El Salvador': 'ESTADO', 'Guatemala': 'state', 'Colombia Minors': 'Departamento:'},
+        'Origen': {'Panamá': 'Origen', 'México': 'Origen', 'Colombia': '', 'Ecuador': 'Origen del registro', 'Perú': '', 'R. Dominicana': '', 'Honduras': '', 'El Salvador': '', 'Guatemala': '', 'Colombia Minors': ''},
+        # Columnas como 'Proveedor' y 'PanelistID' no están en el CSV, por lo que el script
+        # buscará el nombre estándar ('Proveedor', 'PanelistID') en el archivo cargado.
+    }
+}
+# ---
 
 # --- SELECCIÓN DE PAÍS Y CARGA DE ARCHIVOS ---
 col_pais, col_vacia = st.columns([1, 2])
@@ -338,21 +391,56 @@ with col2_up: uploaded_file_txt = st.file_uploader("Carga el archivo Textual", t
 
 # --- LÓGICA DE VALIDACIÓN ---
 if uploaded_file_num is not None and uploaded_file_txt is not None:
-    # ... (carga, optimización, V1-V11 igual que antes) ...
+    
     st.info(f"Archivos cargados. Iniciando validación para **{pais_seleccionado_display}**...")
     st.divider()
-    pais_clave_interna = pais_seleccionado_display
+    pais_clave_interna = pais_seleccionado_display # Alias para claridad
     validation_results = []
+    
     try:
         df_numerico_full = pd.read_excel(io.BytesIO(uploaded_file_num.getvalue()))
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
     except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
     
-    # --- Optimización de Carga ---
+    # --- (NUEVO) LÓGICA DE RENOMBRADO DINÁMICO ---
+    # Crear mapas de renombrado inversos para el país seleccionado
+    rename_map_num = {}
+    rename_map_txt = {}
+
+    # Mapeo Numérico
+    for standard_name, country_mappings in COLUMN_MAPPING['Base Numérica'].items():
+        if pais_clave_interna in country_mappings:
+            country_specific_name = country_mappings[pais_clave_interna]
+            # Solo renombrar si el nombre específico existe en el excel y no es vacío
+            if country_specific_name and country_specific_name in df_numerico_full.columns:
+                rename_map_num[country_specific_name] = standard_name
+
+    # Mapeo Textual
+    for standard_name, country_mappings in COLUMN_MAPPING['Base Textual'].items():
+        if pais_clave_interna in country_mappings:
+            country_specific_name = country_mappings[pais_clave_interna]
+            if country_specific_name and country_specific_name in df_textual_full.columns:
+                rename_map_txt[country_specific_name] = standard_name
+
+    # Aplicar el renombrado a los DataFrames completos
+    try:
+        df_numerico_full.rename(columns=rename_map_num, inplace=True)
+        df_textual_full.rename(columns=rename_map_txt, inplace=True)
+        
+        # Ocultamos los mensajes de mapeo para una UI más limpia
+        # st.write("Mapeo de columnas aplicado (Numérico):", rename_map_num)
+        # st.write("Mapeo de columnas aplicado (Textual):", rename_map_txt)
+    except Exception as e:
+        st.error(f"Error al renombrar columnas: {e}")
+        st.stop()
+    # --- FIN DE LÓGICA DE RENOMBRADO ---
+
+
+    # --- Optimización de Carga (AHORA USA NOMBRES ESTÁNDAR) ---
     # Columnas base (Esenciales)
     num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']
     # Columnas textuales optimizadas (las que se usan en V1-V11)
-    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
+    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor', 'Region2'] # Añadido 'Region2'
     # Columnas numéricas extra (las que se usan en V1-V11)
     num_cols_extra = ['Ponderador', 'NSE', 'gender', 'AGErange', 'Region']
     num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
@@ -368,8 +456,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         # DataFrames optimizados
         df_numerico = df_numerico_full[num_ex]
         df_textual = df_textual_full[txt_ex]
-    except KeyError as e: st.error(f"Columna base esencial {e} no encontrada."); st.stop()
-    # Nota: df_numerico_full y df_textual_full siguen disponibles para validaciones que las requieran (ej. V8, V13)
+    except KeyError as e: st.error(f"Columna base esencial {e} no encontrada (después del renombrado)."); st.stop()
+    # Nota: df_numerico_full y df_textual_full siguen disponibles con nombres estándar
 
     # --- VALIDACIONES (V1-V13) ---
     
@@ -429,7 +517,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
     validation_results.append({'key': key_v4, 'status': status_v4, 'content': content_v4})
 
-    # V5: Agrupaciones
+    # V5: Agrupaciones (ACTUALIZADA)
     key_v5 = "Agrupaciones"; content_v5 = ""; status_v5 = "Correcto"
     # 5.1 Edad
     content_v5 += "<h3>5.1: Edad vs [age]</h3>"; col_g_edad = "Por favor, selecciona el rango de edad en el que te encuentras:"; col_d_edad = '[age]'
@@ -448,8 +536,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except KeyError as e:
         if status_v5 != "Error": status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
-    # 5.3 Geografía
-    content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display})</h3>"; status_v5_3 = "Correcto"
+    
+    # 5.3 Geografía (Región 1)
+    content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display} - Region 1)</h3>"; status_v5_3 = "Correcto"
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
         if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info'>[INFO]</span> No hay reglas geográficas para {pais_seleccionado_display}."
@@ -468,7 +557,58 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except (KeyError, ValueError) as e: status_v5_3 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
     if status_v5 == "Correcto" and status_v5_3 not in ["Correcto", "Info"]: status_v5 = status_v5_3
     elif status_v5_3 == "Error": status_v5 = "Error"
+
+    # --- (NUEVO) 5.4: Geografía 2 (Solo Perú) ---
+    if pais_clave_interna == 'Perú':
+        content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
+        content_v5 += f"<h3>5.4: Geografía 2 ({pais_seleccionado_display} - Region2)</h3>"
+        status_v5_4 = "Correcto" # Status local para esta sub-validación
+        try:
+            clasif_r2 = CLASIFICACIONES_PERU_REGION2
+            col_reg_r2 = 'Region2' # El nombre estándar
+            col_ciu_r2 = 'CIUDAD'  # Usamos la misma columna de ciudad
+            
+            if not all(c in df_textual.columns for c in [col_reg_r2, col_ciu_r2]): 
+                raise KeyError(f"Columnas {col_reg_r2} o {col_ciu_r2} no encontradas para V5.4.")
+                
+            err_reg_r2 = []
+            
+            for idx, row in df_textual.iterrows():
+                reg, ciu = row[col_reg_r2], row[col_ciu_r2]
+                
+                # Ignorar nulos en esta validación específica
+                if pd.isna(reg) or pd.isna(ciu): 
+                    continue
+                    
+                if reg in clasif_r2:
+                    if ciu not in clasif_r2[reg]:
+                        err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{reg}' (region2)"})
+                else:
+                    # Solo reportar si la región NO es nula
+                    if pd.notna(reg):
+                         err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida (region2)"})
+
+            if not err_reg_r2:
+                content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente (region2)."
+            else:
+                status_v5_4 = "Incorrecto"
+                content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg_r2)} inconsistencias (region2).<br>"
+                df_err_r2 = pd.DataFrame(err_reg_r2)
+                content_v5 += "Primeras 5:<br>" + df_err_r2.head().to_html(classes='df-style', index=False)
+        
+        except (KeyError, ValueError) as e: 
+            status_v5_4 = "Error"
+            content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
+            
+        # Actualizar el status general de V5 si V5.4 falló
+        if status_v5 == "Correcto" and status_v5_4 not in ["Correcto", "Info"]: 
+            status_v5 = status_v5_4
+        elif status_v5_4 == "Error": 
+            status_v5 = "Error"
+    # --- FIN V5.4 ---
+
     validation_results.append({'key': key_v5, 'status': status_v5, 'content': content_v5})
+
 
     # V6: Origen/Proveedor
     key_v6 = "Origen/Proveedor"; content_v6 = ""; status_v6 = "Info"; prov_cols = ['Origen', 'Proveedor']
@@ -610,8 +750,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
              else: content_v11 = prefix + "(Sin detalles específicos)"
     validation_results.append({'key': key_v11, 'status': status_v11, 'content': content_v11})
 
-    # --- NUEVAS VALIDACIONES ---
-
     # V12: Duplicados en IDs Principales ([auth] y Unico)
     key_v12 = "Duplicados en IDs Principales"; content_v12 = ""; status_v12 = "Correcto"
     col_num_v12 = 'Unico'; col_txt_v12 = '[auth]'
@@ -651,6 +789,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     col_panel = 'PanelistID'; col_auth_v13 = '[auth]'
     try:
         if col_panel not in df_textual_full.columns:
+            # Si PanelistID no está en el CSV de mapeo, buscará 'PanelistID'.
+            # Si no lo encuentra, lanza el error (comportamiento correcto).
             raise KeyError(f"'{col_panel}' (Textual)")
         if col_auth_v13 not in df_textual_full.columns:
             raise KeyError(f"'{col_auth_v13}' (Textual)") # Para conteo total
@@ -700,7 +840,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.divider()
 
     # --- ÁREA DE REPORTE ESTILIZADO ---
-    # ... (Mismo código de reporte V1.9) ...
     sort_order = {'Correcto': 1, 'Incorrecto': 2, 'Error': 3, 'Info': 4}
     sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
     final_numbered_results = []
@@ -728,7 +867,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.subheader("--- REPORTE DETALLADO ---", divider='violet')
     for v in final_numbered_results:
         status_class = f"status-{v['status'].lower()}"
-        content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:")
+        # (ACTUALIZADO) Añadir reemplazo para 5.4
+        content_detalle = v['content'].replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
         safe_content = content_detalle.replace('<br>', '<br/>')
         safe_content = safe_content.replace('\n', '') # Evita saltos de línea extraños en HTML
         html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
