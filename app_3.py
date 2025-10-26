@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.2 para Streamlit (Correcciones menores UI)
+# Versión Atlantia 2.3 para Streamlit (Validaciones V12 y V13)
 
 import streamlit as st
 import pandas as pd
@@ -21,7 +21,7 @@ def to_excel(df):
     return processed_data
 
 # --- CSS PERSONALIZADO ---
-# (Mismo CSS de la versión anterior)
+# (Mismo CSS de la versión anterior 2.2)
 atlantia_css = """
 <style>
     /* ... (pega aquí TODO el CSS de la versión anterior 2.1) ... */
@@ -264,6 +264,8 @@ st.markdown("""
 * **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.
 * **Suma Ponderador por demográfico:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.
 * **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
+* **Duplicados en IDs:** Verifica que `Unico` (Num) y `[auth]` (Txt) no tengan valores repetidos.
+* **Duplicados PanelistID:** Revisa `PanelistID` (Txt) por duplicados y reporta el conteo.
 """)
 st.divider()
 
@@ -273,7 +275,7 @@ CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
-    'Ecuador': {'Costa/Coast': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra/ Highland': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
+    'Ecuador': {'Costa/Coast': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra/ Highland': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungahua']},
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
@@ -345,18 +347,32 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         df_numerico_full = pd.read_excel(io.BytesIO(uploaded_file_num.getvalue()))
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
     except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
-    num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']; txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
+    
+    # --- Optimización de Carga ---
+    # Columnas base (Esenciales)
+    num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']
+    # Columnas textuales optimizadas (las que se usan en V1-V11)
+    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor']
+    # Columnas numéricas extra (las que se usan en V1-V11)
     num_cols_extra = ['Ponderador', 'NSE', 'gender', 'AGErange', 'Region']
     num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
+    
+    # Combinar base + extra (evitando duplicados)
     num_cols = num_cols_base + list(set([c for c in num_cols_extra if c in df_numerico_full.columns and c not in num_cols_base]))
-    num_ex = [c for c in num_cols_base if c in df_numerico_full.columns]; txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
+    
+    # Filtrar solo las que existen
+    num_ex = [c for c in num_cols if c in df_numerico_full.columns]; 
+    txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
+    
     try:
+        # DataFrames optimizados
         df_numerico = df_numerico_full[num_ex]
         df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada."); st.stop()
+    # Nota: df_numerico_full y df_textual_full siguen disponibles para validaciones que las requieran (ej. V8, V13)
 
-    # --- VALIDACIONES (V1-V11) ---
-    # (Pega aquí el código EXACTO de V1 a V11 de la versión anterior 1.9)
+    # --- VALIDACIONES (V1-V13) ---
+    
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     fn, cn = df_numerico_full.shape; ft, ct = df_textual_full.shape
@@ -396,14 +412,19 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     key_v4 = "Periodo Campo ('startdate')"; content_v4 = ""; status_v4 = "Info"; col_fecha = 'startdate'
     locale_usado = ''; formato_fecha = '%d/%b/%Y %H:%M'
     try:
-        try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8'); locale_usado = 'es_ES'; formato_fecha = '%d de %B de %Y, %I:%M %p'
+        # Intenta configurar el locale para español (para Mac/Linux y luego Windows)
+        # Mac/Linux a menudo usa 'es_ES.UTF-8'
+        try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8'); locale_usado = 'es_ES.UTF-8'; formato_fecha = '%d de %B de %Y, %I:%M %p'
         except:
+            # Windows a menudo usa 'es' o 'es_ES'
             try: locale.setlocale(locale.LC_TIME, 'es'); locale_usado = 'es'; formato_fecha = '%d de %B de %Y, %I:%M %p'
+            # Fallback al locale por defecto del sistema
             except: locale.setlocale(locale.LC_TIME, ''); locale_usado = 'Sistema'
+        
         if col_fecha not in df_textual.columns: raise KeyError(f"'{col_fecha}' ausente.")
         fechas = pd.to_datetime(df_textual[col_fecha], dayfirst=True, errors='coerce').dropna()
-        if not fechas.empty: f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo ({locale_usado}):</b><br> - Inicio: {f_min.strftime(formato_fecha)}<br> - Fin: {f_max.strftime(formato_fecha)}<br>"
-        else: status_v4 = "Error"; content_v4 += "<span class='status-error-inline'>[ERROR]</span> No hay fechas.<br>"
+        if not fechas.empty: f_min, f_max = fechas.min(), fechas.max(); content_v4 += f"<b>Periodo (locale: {locale_usado}):</b><br> - Inicio: {f_min.strftime(formato_fecha)}<br> - Fin: {f_max.strftime(formato_fecha)}<br>"
+        else: status_v4 = "Error"; content_v4 += "<span class='status-error-inline'>[ERROR]</span> No hay fechas válidas.<br>"
     except KeyError as e: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR]</span> Col {e}.<br>"
     except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
     validation_results.append({'key': key_v4, 'status': status_v4, 'content': content_v4})
@@ -588,6 +609,89 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
              if errores_umbrales: df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]; content_v11 = prefix + df_errores.to_html(classes='df-style', index=False)
              else: content_v11 = prefix + "(Sin detalles específicos)"
     validation_results.append({'key': key_v11, 'status': status_v11, 'content': content_v11})
+
+    # --- NUEVAS VALIDACIONES ---
+
+    # V12: Duplicados en IDs Principales ([auth] y Unico)
+    key_v12 = "Duplicados en IDs Principales"; content_v12 = ""; status_v12 = "Correcto"
+    col_num_v12 = 'Unico'; col_txt_v12 = '[auth]'
+    try:
+        # Checar Numérico ('Unico')
+        if col_num_v12 not in df_numerico.columns:
+            raise KeyError(f"'{col_num_v12}' (Numérica)")
+        dups_num = df_numerico[col_num_v12].duplicated()
+        total_dups_num = dups_num.sum()
+        if total_dups_num > 0:
+            status_v12 = "Incorrecto"
+            ids_dup_num = df_numerico[dups_num][col_num_v12].unique()
+            content_v12 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> <b>{total_dups_num}</b> duplicados en <b>'{col_num_v12}'</b> (Num).<br>Primeros 5 valores: {list(ids_dup_num[:5])}<br>"
+        else:
+            content_v12 += f"<span class='status-correcto-inline'>[Correcto]</span> Sin duplicados en <b>'{col_num_v12}'</b> (Num).<br>"
+
+        # Checar Textual ('[auth]')
+        if col_txt_v12 not in df_textual.columns:
+            raise KeyError(f"'{col_txt_v12}' (Textual)")
+        dups_txt = df_textual[col_txt_v12].duplicated()
+        total_dups_txt = dups_txt.sum()
+        if total_dups_txt > 0:
+            status_v12 = "Incorrecto"
+            ids_dup_txt = df_textual[dups_txt][col_txt_v12].unique()
+            content_v12 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> <b>{total_dups_txt}</b> duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>Primeros 5 valores: {list(ids_dup_txt[:5])}<br>"
+        else:
+            content_v12 += f"<span class='status-correcto-inline'>[Correcto]</span> Sin duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>"
+            
+    except KeyError as e:
+        status_v12 = "Error"
+        content_v12 += f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada."
+    validation_results.append({'key': key_v12, 'status': status_v12, 'content': content_v12})
+
+
+    # V13: Duplicados en PanelistID
+    key_v13 = "Duplicados en PanelistID"; content_v13 = ""; status_v13 = "Correcto"
+    col_panel = 'PanelistID'; col_auth_v13 = '[auth]'
+    try:
+        if col_panel not in df_textual_full.columns:
+            raise KeyError(f"'{col_panel}' (Textual)")
+        if col_auth_v13 not in df_textual_full.columns:
+            raise KeyError(f"'{col_auth_v13}' (Textual)") # Para conteo total
+
+        total_filas = len(df_textual_full) # Usamos len() que es más directo
+        
+        # Encontrar todas las filas que tienen un PanelistID duplicado (keep=False marca todas)
+        dups_mask = df_textual_full[col_panel].duplicated(keep=False)
+        total_duplicados = dups_mask.sum()
+
+        if total_duplicados > 0:
+            status_v13 = "Incorrecto"
+            df_dups = df_textual_full[dups_mask]
+            ids_unicos_duplicados = df_dups[col_panel].nunique()
+            
+            content_v13 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Se encontraron <b>{total_duplicados}</b> filas con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
+            content_v13 += f"- Total Filas Duplicadas: <b>{total_duplicados:,}</b><br>"
+            content_v13 += f"- Total Filas Encuesta: <b>{total_filas:,}</b><br>"
+            content_v13 += f"- Porcentaje Duplicado: <b>{(total_duplicados / total_filas) * 100:.2f}%</b><br><br>"
+            content_v13 += f"Reporte de IDs duplicados (Top 10 más repetidos):<br>"
+            
+            # Agrupar para mostrar cuántas veces se repite cada uno
+            conteo_dups = df_dups.groupby(col_panel)[col_auth_v13].count().reset_index()
+            conteo_dups.columns = [col_panel, 'Veces Repetido']
+            conteo_dups = conteo_dups.sort_values(by='Veces Repetido', ascending=False)
+            
+            content_v13 += conteo_dups.head(10).to_html(classes='df-style', index=False)
+            if len(conteo_dups) > 10:
+                content_v13 += f"<br>... y <b>{len(conteo_dups) - 10}</b> IDs duplicados más."
+        
+        else:
+            content_v13 += f"<span class='status-correcto-inline'>[Correcto]</span> No se encontraron duplicados en <b>'{col_panel}'</b>."
+            content_v13 += f"<br>Total filas validadas: <b>{total_filas:,}</b>."
+    
+    except KeyError as e:
+        status_v13 = "Error"
+        content_v13 += f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada."
+    except Exception as e:
+            status_v13 = "Error"
+            content_v13 += f"<span class='status-error-inline'>[ERROR inesperado]</span> {e}"
+    validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
 
 
     # --- FIN VALIDACIONES ---
