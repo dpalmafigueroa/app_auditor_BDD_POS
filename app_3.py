@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.5 para Streamlit (Validación Dual Geográfica Perú)
+# Versión Atlantia 2.6 para Streamlit (Corrección nombre PanelistID)
 
 import streamlit as st
 import pandas as pd
@@ -262,7 +262,7 @@ st.markdown("""
 * **Suma Ponderador por demográfico:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.
 * **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
 * **Duplicados en IDs:** Verifica que `Unico` (Num) y `[auth]` (Txt) no tengan valores repetidos.
-* **Duplicados PanelistID:** Revisa `PanelistID` (Txt) por duplicados y reporta el conteo.
+* **Duplicados [panelistid]:** Revisa `[panelistid]` (Txt) por duplicados y reporta el conteo.
 """)
 st.divider()
 
@@ -344,11 +344,12 @@ COLUMN_MAPPING = {
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
         'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', 'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
-        'Region2': {'Perú': 'region2'}, # (NUEVO) Mapeo para la segunda región de Perú
+        'Region2': {'Perú': 'region2'}, # Mapeo para la segunda región de Perú
         'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Region', 'El Salvador': 'ESTADO', 'Guatemala': 'state', 'Colombia Minors': 'Departamento:'},
         'Origen': {'Panamá': 'Origen', 'México': 'Origen', 'Colombia': '', 'Ecuador': 'Origen del registro', 'Perú': '', 'R. Dominicana': '', 'Honduras': '', 'El Salvador': '', 'Guatemala': '', 'Colombia Minors': ''},
-        # Columnas como 'Proveedor' y 'PanelistID' no están en el CSV, por lo que el script
-        # buscará el nombre estándar ('Proveedor', 'PanelistID') en el archivo cargado.
+        # Columnas como 'Proveedor' y '[panelistid]' no están en el CSV de mapeo,
+        # por lo que el script buscará el nombre estándar ('Proveedor', '[panelistid]')
+        # en el archivo cargado.
     }
 }
 # ---
@@ -439,9 +440,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # --- Optimización de Carga (AHORA USA NOMBRES ESTÁNDAR) ---
     # Columnas base (Esenciales)
     num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']
-    # Columnas textuales optimizadas (las que se usan en V1-V11)
-    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor', 'Region2'] # Añadido 'Region2'
-    # Columnas numéricas extra (las que se usan en V1-V11)
+    # Columnas textuales optimizadas
+    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor', 'Region2', '[panelistid]'] # Añadidos
+    # Columnas numéricas extra
     num_cols_extra = ['Ponderador', 'NSE', 'gender', 'AGErange', 'Region']
     num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
     
@@ -784,12 +785,12 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     validation_results.append({'key': key_v12, 'status': status_v12, 'content': content_v12})
 
 
-    # V13: Duplicados en PanelistID
-    key_v13 = "Duplicados en PanelistID"; content_v13 = ""; status_v13 = "Correcto"
-    col_panel = 'PanelistID'; col_auth_v13 = '[auth]'
+    # V13: Duplicados en [panelistid] (ACTUALIZADO)
+    key_v13 = "Duplicados en [panelistid]"; content_v13 = ""; status_v13 = "Correcto"
+    col_panel = '[panelistid]'; col_auth_v13 = '[auth]' # <-- CAMBIO APLICADO
     try:
         if col_panel not in df_textual_full.columns:
-            # Si PanelistID no está en el CSV de mapeo, buscará 'PanelistID'.
+            # Si [panelistid] no está en el CSV de mapeo, buscará '[panelistid]'.
             # Si no lo encuentra, lanza el error (comportamiento correcto).
             raise KeyError(f"'{col_panel}' (Textual)")
         if col_auth_v13 not in df_textual_full.columns:
@@ -797,7 +798,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
         total_filas = len(df_textual_full) # Usamos len() que es más directo
         
-        # Encontrar todas las filas que tienen un PanelistID duplicado (keep=False marca todas)
+        # Encontrar todas las filas que tienen un [panelistid] duplicado (keep=False marca todas)
         dups_mask = df_textual_full[col_panel].duplicated(keep=False)
         total_duplicados = dups_mask.sum()
 
@@ -844,7 +845,13 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
     final_numbered_results = []
     for i, v in enumerate(sorted_results_temp):
-        new_title = f"Validación {i + 1}: {v['key']}"; final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
+        # Actualizar el título de V13 si V13 fue renombrado
+        if v['key'] == "Duplicados en [panelistid]":
+            new_title = f"Validación {i + 1}: {v['key']}"
+        else:
+             new_title = f"Validación {i + 1}: {v['key']}"
+        final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
+
 
     correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
     info_count = sum(1 for v in validation_results if v['status'] == 'Info'); error_count = sum(1 for v in validation_results if v['status'] == 'Error')
