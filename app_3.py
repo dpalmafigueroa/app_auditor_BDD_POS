@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.14 para Streamlit (Fix V5.2 - Selección posicional NSE/NSE2)
+# Versión Atlantia 2.15 para Streamlit (Corrección Geo Guatemala)
 
 import streamlit as st
 import pandas as pd
@@ -277,7 +277,15 @@ CLASIFICACIONES_POR_PAIS = {
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
-    'Guatemala': {'Metro': ['Guatemala'],'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa'],'Occidente': ['Chimaltenango', 'Huehuetenango', 'Quetzaltenango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],'Sur Occidente': ['Escuintla', 'Retalhuleu', 'Suchitepequez'],'Sur Oriente': ['Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula']},
+    # --- INICIO CORRECCIÓN GUATEMALA v2.15 ---
+    'Guatemala': {
+        'Metro': ['Guatemala'],
+        'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa'],
+        'Nor Occidente': ['Chimaltenango', 'Huehuetenango', 'Quetzaltengango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],
+        'Sur Occidente': ['Retalhuleu', 'Suchitepéquez'],
+        'Sur Oriente': ['Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula', 'Escuintla']
+    },
+    # --- FIN CORRECCIÓN GUATEMALA v2.15 ---
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
@@ -620,9 +628,26 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             for idx, row in df_textual.iterrows():
                 reg, ciu = row[col_reg], row[col_ciu]
                 if pd.isna(reg) or pd.isna(ciu): continue
-                if reg in clasif:
-                    if ciu not in clasif[reg]: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{reg}'"})
-                else: err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida"})
+                # Convertir a string para comparación insensible a mayúsculas/minúsculas y espacios
+                reg_str = str(reg).strip()
+                ciu_str = str(ciu).strip()
+
+                # Buscar la región correcta (insensible a mayúsculas/minúsculas)
+                found_reg = False
+                correct_reg_key = None
+                for key in clasif.keys():
+                    if key.lower() == reg_str.lower():
+                        found_reg = True
+                        correct_reg_key = key
+                        break
+                
+                if found_reg:
+                    # Buscar la ciudad correcta (insensible a mayúsculas/minúsculas)
+                    if not any(ciudad.lower() == ciu_str.lower() for ciudad in clasif[correct_reg_key]):
+                         err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no encontrada en '{correct_reg_key}' (case insensitive)"})
+                else:
+                    err_reg.append({'Fila': idx + 2, 'Region': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida (case insensitive)"})
+
             if not err_reg: content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente."
             else: status_v5_3 = "Incorrecto"; content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg)} inconsistencias.<br>"; df_err = pd.DataFrame(err_reg); content_v5 += "Primeras 5:<br>" + df_err.head().to_html(classes='df-style', index=False)
     except (KeyError, ValueError) as e: status_v5_3 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
@@ -643,12 +668,25 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             for idx, row in df_textual.iterrows():
                 reg, ciu = row[col_reg_r2], row[col_ciu_r2]
                 if pd.isna(reg) or pd.isna(ciu): continue
-                if reg in clasif_r2:
-                    if ciu not in clasif_r2[reg]:
-                        err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{reg}' (region2)"})
+                # Convertir a string para comparación insensible
+                reg_str = str(reg).strip()
+                ciu_str = str(ciu).strip()
+
+                found_reg_r2 = False
+                correct_reg_key_r2 = None
+                for key in clasif_r2.keys():
+                    if key.lower() == reg_str.lower():
+                        found_reg_r2 = True
+                        correct_reg_key_r2 = key
+                        break
+                        
+                if found_reg_r2:
+                    if not any(ciudad.lower() == ciu_str.lower() for ciudad in clasif_r2[correct_reg_key_r2]):
+                        err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{correct_reg_key_r2}' (region2, case insensitive)"})
                 else:
-                    if pd.notna(reg):
-                         err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida (region2)"})
+                    if pd.notna(reg): # Solo reportar si la región no es nula pero inválida
+                         err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida (region2, case insensitive)"})
+                         
             if not err_reg_r2:
                 content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente (region2)."
             else:
