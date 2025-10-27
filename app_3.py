@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.20 para Streamlit (Corrección Mapeo Honduras Geo)
+# Versión Atlantia 2.21 para Streamlit (Corrección Final Mapeo Honduras Geo)
 
 import streamlit as st
 import pandas as pd
@@ -20,10 +20,10 @@ def to_excel(df):
     return processed_data
 
 # --- CSS PERSONALIZADO ---
-# (Mismo CSS)
+# (Mismo CSS que versiones anteriores)
 atlantia_css = """
 <style>
-    /* ... (pega aquí TODO el CSS de la versión anterior 2.1) ... */
+    /* ... (pega aquí TODO el CSS de la versión anterior) ... */
      /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -55,7 +55,7 @@ atlantia_css = """
 
         /* --- Variables ADAPTATIVAS Claro/Oscuro --- */
         /* Tema Claro (Por defecto) */
-        --text-color: #0E117; /* Streamlit's default dark text */
+        --text-color: #0E1117; /* Streamlit's default dark text */
         --text-color-subtle: #555;
         --bg-color: #FFFFFF;
         --secondary-bg-color: #F0F2F6; /* Streamlit's light secondary bg */
@@ -318,6 +318,7 @@ paises_disponibles = sorted(list(CLASIFICACIONES_POR_PAIS.keys()))
 # --- (ACTUALIZADO) MAPEO DINÁMICO DE COLUMNAS ---
 COLUMN_MAPPING = {
     'Base Numérica': {
+        # ... (sin cambios aquí) ...
         'Unico': {'Panamá': 'Unico', 'México': 'Unico', 'Colombia': 'Unico', 'Ecuador': 'Unico', 'Perú': 'Unico', 'R. Dominicana': 'Unico', 'Honduras': 'Unico', 'El Salvador': 'Unico', 'Guatemala': 'Unico', 'Colombia Minors': 'id'},
         'lastpage': {'Panamá': 'lastpage', 'México': 'lastpage', 'Colombia': 'lastpage', 'Ecuador': 'lastpage', 'Perú': 'lastpage', 'R. Dominicana': 'lastpage', 'Honduras': 'lastpage', 'El Salvador': 'lastpage', 'Guatemala': 'lastpage', 'Colombia Minors': 'lastpage'},
         'lastpage_Parte2': {'Panamá': 'lastpage_Parte2', 'México': 'lastpage_Parte2', 'Colombia': 'lastpage_Parte2', 'Ecuador': 'lastpage_Parte2', 'Perú': 'lastpage_Parte2', 'R. Dominicana': 'lastpage_Parte2', 'Honduras': 'lastpage_Parte2', 'El Salvador': 'lastpage_Parte2', 'Guatemala': 'lastpage_Parte2', 'Colombia Minors': ''},
@@ -329,8 +330,8 @@ COLUMN_MAPPING = {
         'Total_consumo': {'Panamá': 'Total_consumo', 'México': 'Total_consumo', 'Colombia': 'Total_consumo', 'Ecuador': 'Total_consumo', 'Perú': 'Total_consumo', 'R. Dominicana': 'Total_consumo', 'Honduras': 'Total_consumo', 'El Salvador': 'Total_consumo', 'Guatemala': 'Total_consumo', 'Colombia Minors': 'Total_consumo'},
         'Beer': {'Panamá': 'Beer', 'México': 'Beer', 'Colombia': 'Beer', 'Ecuador': 'Beer', 'Perú': 'Beer', 'R. Dominicana': 'Beer', 'Honduras': 'Beer', 'El Salvador': 'Beer', 'Guatemala': 'Beer', 'Colombia Minors': ''},
         'Wine': {'Panamá': 'Wine', 'México': 'Wine', 'Colombia': 'Wine', 'Ecuador': 'Wine', 'Perú': 'Wine', 'R. Dominicana': 'Wine', 'Honduras': 'Wine', 'El Salvador': 'Wine', 'Guatemala': 'Wine', 'Colombia Minors': ''},
-        'Ron': {'R. Dominicana': 'Rum'}, 
-        'Whisky': {'R. Dominicana': 'Wiskey'}, 
+        'Ron': {'R. Dominicana': 'Rum'},
+        'Whisky': {'R. Dominicana': 'Wiskey'},
         'Spirits': {'Panamá': 'Spirits', 'México': 'Spirits', 'Colombia': 'Spirits', 'Ecuador': 'Spirits', 'Perú': 'Spirits', 'R. Dominicana': 'Spirits', 'Honduras': 'Spirits', 'El Salvador': 'Spirits', 'Guatemala': 'Spirits', 'Colombia Minors': ''},
         'Other_alc': {'Panamá': 'Other_alc', 'México': 'Other_alc', 'Colombia': 'Other_alc', 'Ecuador': 'Other_alc', 'Perú': 'Other_alc', 'R. Dominicana': 'Other_alc', 'Honduras': 'Other_alc', 'El Salvador': 'Other_alc', 'Guatemala': 'Other_alc', 'Colombia Minors': ''},
         'CSDs': {'Panamá': 'CSDs', 'México': 'CSDs', 'Colombia': 'CSDs', 'Ecuador': 'CSDs', 'Perú': 'CSDs', 'R. Dominicana': 'CSDs', 'Honduras': 'CSDs', 'El Salvador': 'CSDs', 'Guatemala': 'CSDs', 'Colombia Minors': 'CSDs'},
@@ -349,13 +350,13 @@ COLUMN_MAPPING = {
         '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', 'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
-        # --- INICIO CORRECCIÓN HONDURAS GEO v2.20 ---
-        'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Ahora apunta a 'Region'
+        # --- INICIO CORRECCIÓN HONDURAS GEO v2.21 ---
+        'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia
          'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
-        # --- FIN CORRECCIÓN HONDURAS GEO v2.20 ---
-        'Region2': {'Perú': 'region2'}, 
-        'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Region', # <-- Sigue apuntando a 'Region' para el departamento
+        'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Estado', # <-- Columna de Departamento/Ciudad
          'El Salvador': 'ESTADO', 'Guatemala': 'state', 'Colombia Minors': 'Departamento:'},
+        # --- FIN CORRECCIÓN HONDURAS GEO v2.21 ---
+        'Region2': {'Perú': 'region2'},
         'Origen': {'Panamá': 'Origen', 'México': 'Origen', 'Colombia': '', 'Ecuador': 'Origen del registro', 'Perú': '', 'R. Dominicana': '', 'Honduras': '', 'El Salvador': '', 'Guatemala': '', 'Colombia Minors': ''},
         # Columnas como 'Proveedor' y '[panelistid]' no están en el CSV de mapeo,
         # por lo que el script buscará el nombre estándar ('Proveedor', '[panelistid]')
@@ -462,7 +463,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if missing_std_cols_num:
         error_messages.append(f"Faltan columnas esenciales en la base numérica después del renombrado: **{', '.join(missing_std_cols_num)}**. Verifique el mapeo o el archivo original.")
     if missing_std_cols_txt:
-         # Ya no necesitamos la excepción especial para Honduras Geo porque ambas apuntan a 'Region' que debería existir si CIUDAD existe.
+        # Ya no necesitamos la excepción especial para Honduras Geo, el chequeo general funcionará
          error_messages.append(f"Faltan columnas esenciales en la base textual después del renombrado: **{', '.join(missing_std_cols_txt)}**. Verifique el mapeo o el archivo original.")
 
     if error_messages:
