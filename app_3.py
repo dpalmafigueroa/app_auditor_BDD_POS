@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.15 para Streamlit (Corrección Geo Guatemala)
+# Versión Atlantia 2.17 para Streamlit (Corrección Final Geo Guatemala - 3 Regiones)
 
 import streamlit as st
 import pandas as pd
@@ -277,15 +277,13 @@ CLASIFICACIONES_POR_PAIS = {
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
-    # --- INICIO CORRECCIÓN GUATEMALA v2.15 ---
+    # --- INICIO CORRECCIÓN GUATEMALA v2.17 (Final - 3 Regiones) ---
     'Guatemala': {
         'Metro': ['Guatemala'],
-        'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa'],
-        'Nor Occidente': ['Chimaltenango', 'Huehuetenango', 'Quetzaltengango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],
-        'Sur Occidente': ['Retalhuleu', 'Suchitepéquez'],
-        'Sur Oriente': ['Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula', 'Escuintla']
+        'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa', 'Chimaltenango', 'Huehuetenango', 'Quetzaltengango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],
+        'Sur Occidente': ['Retalhuleu', 'Suchitepéquez', 'Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula', 'Escuintla']
     },
-    # --- FIN CORRECCIÓN GUATEMALA v2.15 ---
+    # --- FIN CORRECCIÓN GUATEMALA v2.17 ---
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
@@ -616,7 +614,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
     
-    # 5.3 Geografía (Región 1)
+    # 5.3 Geografía (Región 1) - Añadido chequeo case-insensitive v2.16
     content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display} - Region 1)</h3>"; status_v5_3 = "Correcto"
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
@@ -654,7 +652,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if status_v5 == "Correcto" and status_v5_3 not in ["Correcto", "Info"]: status_v5 = status_v5_3
     elif status_v5_3 == "Error": status_v5 = "Error"
 
-    # --- 5.4: Geografía 2 (Solo Perú) ---
+    # --- 5.4: Geografía 2 (Solo Perú) - Añadido chequeo case-insensitive v2.16
     if pais_clave_interna == 'Perú':
         content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
         content_v5 += f"<h3>5.4: Geografía 2 ({pais_seleccionado_display} - Region2)</h3>"
