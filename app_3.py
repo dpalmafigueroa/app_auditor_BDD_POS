@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.21 para Streamlit (Corrección Final Mapeo Honduras Geo)
+# Versión Atlantia 2.23 para Streamlit (Manejo automático de columnas duplicadas en Excel)
 
 import streamlit as st
 import pandas as pd
@@ -7,6 +7,7 @@ import locale
 import io # Para leer los archivos subidos
 import numpy as np # Para manejar tipos numéricos
 from io import BytesIO # Para crear Excel en memoria
+from collections import Counter # Para manejar duplicados
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Auditor de calidad de bases de datos")
@@ -18,6 +19,37 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Reglas')
     processed_data = output.getvalue()
     return processed_data
+
+# --- NUEVA FUNCIÓN PARA MANEJAR COLUMNAS DUPLICADAS ---
+def deduplicate_columns(df):
+    """
+    Renombra columnas duplicadas añadiendo un sufijo numérico (.1, .2, etc.).
+    """
+    cols = pd.Series(df.columns)
+    counts = Counter(cols)
+    new_cols = []
+    col_counts_so_far = Counter()
+
+    for col in cols:
+        count = counts[col]
+        if count > 1:
+            suffix_num = col_counts_so_far[col]
+            if suffix_num > 0: # Solo añadir sufijo a partir de la segunda ocurrencia
+                new_cols.append(f"{col}.{suffix_num}")
+            else:
+                new_cols.append(col) # La primera se queda igual
+            col_counts_so_far[col] += 1
+        else:
+            new_cols.append(col) # Si no está duplicada, se queda igual
+
+    df.columns = new_cols
+    # Advertir si se renombraron columnas
+    renamed = [old for old, new in zip(cols, new_cols) if old != new]
+    if renamed:
+        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {list(set(renamed))}. Se usará la primera ocurrencia para el mapeo.")
+    return df
+# --- FIN NUEVA FUNCIÓN ---
+
 
 # --- CSS PERSONALIZADO ---
 # (Mismo CSS que versiones anteriores)
@@ -350,7 +382,7 @@ COLUMN_MAPPING = {
         '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', 'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
-        # --- INICIO CORRECCIÓN HONDURAS GEO v2.21 ---
+        # --- CORRECCIÓN FINAL HONDURAS GEO v2.21 ---
         'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia
          'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
         'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Estado', # <-- Columna de Departamento/Ciudad
@@ -408,44 +440,53 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     validation_results = []
 
     try:
+        # Leer archivos
         df_numerico_full = pd.read_excel(io.BytesIO(uploaded_file_num.getvalue()))
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
-    except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
+
+        # --- APLICAR DEDUPLICACIÓN DE COLUMNAS (v2.23) ---
+        df_numerico_full = deduplicate_columns(df_numerico_full.copy()) # Usar .copy() para evitar modificar el original si se vuelve a usar
+        df_textual_full = deduplicate_columns(df_textual_full.copy())
+        # --- FIN DEDUPLICACIÓN ---
+
+    except Exception as e: st.error(f"Error al leer o pre-procesar archivos: {e}"); st.stop()
 
     # --- LÓGICA DE RENOMBRADO DINÁMICO ---
     rename_map_num = {}
     rename_map_txt = {}
     missing_original_cols = {'num': [], 'txt': []} # Para rastrear cols que faltan en origen
 
+    # Ahora el mapeo buscará el nombre original (sin sufijo .1, .2) en las columnas ya deduplicadas
     for standard_name, country_mappings in COLUMN_MAPPING['Base Numérica'].items():
         if pais_clave_interna in country_mappings:
             country_specific_name = country_mappings[pais_clave_interna]
             if country_specific_name: # Solo si hay un nombre mapeado
-                if country_specific_name in df_numerico_full.columns:
+                if country_specific_name in df_numerico_full.columns: # Buscar el nombre *sin* sufijo
                     rename_map_num[country_specific_name] = standard_name
                 else:
-                    missing_original_cols['num'].append(country_specific_name) # Registrar original faltante
+                    missing_original_cols['num'].append(country_specific_name) # Registrar original faltante (sin sufijo)
 
     for standard_name, country_mappings in COLUMN_MAPPING['Base Textual'].items():
         if pais_clave_interna in country_mappings:
             country_specific_name = country_mappings[pais_clave_interna]
             if country_specific_name: # Solo si hay un nombre mapeado
-                if country_specific_name in df_textual_full.columns:
+                if country_specific_name in df_textual_full.columns: # Buscar el nombre *sin* sufijo
                     rename_map_txt[country_specific_name] = standard_name
                 else:
-                     missing_original_cols['txt'].append(country_specific_name) # Registrar original faltante
+                     missing_original_cols['txt'].append(country_specific_name) # Registrar original faltante (sin sufijo)
 
     # Mostrar advertencia si faltan columnas ORIGINALES mapeadas
     if missing_original_cols['num']:
-        st.warning(f"Advertencia: Las siguientes columnas esperadas (mapeadas) no se encontraron en el archivo Numérico: {', '.join(missing_original_cols['num'])}")
+        st.warning(f"Advertencia: Las siguientes columnas mapeadas no se encontraron (ni siquiera como primera ocurrencia) en el archivo Numérico: {', '.join(missing_original_cols['num'])}")
     if missing_original_cols['txt']:
-         st.warning(f"Advertencia: Las siguientes columnas esperadas (mapeadas) no se encontraron en el archivo Textual: {', '.join(missing_original_cols['txt'])}")
+         st.warning(f"Advertencia: Las siguientes columnas mapeadas no se encontraron (ni siquiera como primera ocurrencia) en el archivo Textual: {', '.join(missing_original_cols['txt'])}")
 
     try:
+        # Renombrar usando los nombres originales (sin sufijo) que sí existen
         df_numerico_renamed = df_numerico_full.rename(columns=rename_map_num)
         df_textual_renamed = df_textual_full.rename(columns=rename_map_txt)
     except Exception as e:
-        st.error(f"Error durante el proceso de renombrar columnas: {e}")
+        st.error(f"Error durante el proceso de renombrar columnas después de la deduplicación: {e}")
         st.stop()
     # --- FIN DE LÓGICA DE RENOMBRADO ---
 
@@ -455,6 +496,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # Añadir Ponderador si no es Colombia Minors
     if pais_clave_interna != 'Colombia Minors':
         required_cols_num.append('Ponderador')
+     # Añadir Region2 si es Perú
+    if pais_clave_interna == 'Perú':
+        required_cols_txt.append('Region2')
+
 
     missing_std_cols_num = [col for col in required_cols_num if col not in df_numerico_renamed.columns]
     missing_std_cols_txt = [col for col in required_cols_txt if col not in df_textual_renamed.columns]
@@ -498,8 +543,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
          st.stop()
 
     # --- VALIDACIONES (V1-V13) ---
-    # (El resto de las validaciones V1-V13 permanecen igual que en v2.19)
-
+    # (El resto de las validaciones V1-V13 permanecen igual que en v2.21)
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     # USA df_numerico_full y df_textual_full para obtener dimensiones originales
@@ -639,17 +683,27 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
 
-    # 5.2 NSE
+    # 5.2 NSE - Añadido fillna y try-except más específico v2.22
     content_v5 += "<h3>5.2: NSE vs NSE2</h3>"; col_g_nse = 'NSE'; col_d_nse = 'NSE2'
     try:
-        # Ya se verificó que 'NSE' y 'NSE2' existen
-        # Usar directamente los nombres estándar en df_textual para crosstab
-        rep_nse = pd.crosstab(df_textual[col_g_nse], df_textual[col_d_nse], dropna=False) # Incluir NaNs
-        content_v5 += "Verifica consistencia (incluye valores vacíos/nulos):<br>" + rep_nse.to_html(classes='df-style', na_rep='NULO/VACÍO')
-    except KeyError as e: # Por si acaso
-        if status_v5 != "Error": status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> Columna NSE faltante: {e}<br>"
+        # Asegurarse de que ambas columnas existen (ya chequeado antes, pero doble check)
+        if col_g_nse not in df_textual.columns: raise KeyError(f"Columna '{col_g_nse}'")
+        if col_d_nse not in df_textual.columns: raise KeyError(f"Columna '{col_d_nse}'")
+
+        # Rellenar NaNs explícitamente ANTES de crosstab
+        nse1_filled = df_textual[col_g_nse].fillna('VACÍO/NULO')
+        nse2_filled = df_textual[col_d_nse].fillna('VACÍO/NULO')
+
+        # Usar las series rellenadas en crosstab
+        rep_nse = pd.crosstab(nse1_filled, nse2_filled, dropna=False) # dropna=False es redundante ahora pero no daña
+
+        content_v5 += "Verifica consistencia (incluye valores vacíos/nulos):<br>" + rep_nse.to_html(classes='df-style', na_rep='-') # na_rep es por si acaso
+    except KeyError as e_nse_key: # Captura específica si A PESAR de todo falta una columna
+        if status_v5 != "Error": status_v5 = "Error"
+        content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e_nse_key} no encontrada al intentar crear tabla cruzada NSE.<br>"
     except Exception as e_crosstab: # Captura otros posibles errores de crosstab
-        if status_v5 != "Error": status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR Crosstab NSE]</span> {e_crosstab}<br>"
+        if status_v5 != "Error": status_v5 = "Error"
+        content_v5 += f"<span class='status-error-inline'>[ERROR Crosstab NSE]</span> {e_crosstab}<br>"
 
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
 
@@ -817,16 +871,23 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         if id_auth not in df_textual_renamed.columns: raise KeyError(f"Columna ID '{id_auth}' no encontrada para reporte de abiertas.")
 
         # Buscar columnas 'menciona' en el DF ORIGINAL (antes de filtrar)
-        cols_m_original = [c for c in df_textual_full.columns if "menciona" in str(c).lower() and "mencionaste" not in str(c).lower()]
-        total_p = len(cols_m_original)
+        # Usamos df_textual_full.columns que tiene los nombres únicos post-deduplicación
+        cols_m_original_dedup = [c for c in df_textual_full.columns if c.split('.')[0] == 'Menciona' or ("menciona" in str(c).lower() and "mencionaste" not in str(c).lower())]
+        total_p = len(cols_m_original_dedup)
 
-        if not cols_m_original:
+        if not cols_m_original_dedup:
             content_v8 = "<span class='status-info-inline'>[INFO]</span> No se encontraron columnas que contengan 'menciona' en el archivo textual original."
         else:
-            # Seleccionar estas columnas y el ID del DF RENOMBRADO (asegura que el ID existe)
-            cols_m_renamed = [rename_map_txt.get(c, c) for c in cols_m_original if rename_map_txt.get(c,c) in df_textual_renamed.columns] # Nombres estándar que sí existen
+            # Seleccionar estas columnas y el ID del DF RENOMBRADO
+            # Mapear los nombres deduplicados a los nombres estándar si existen en el renombrado
+            cols_m_renamed = [rename_map_txt.get(c.split('.')[0], c) # Intentar mapear el nombre base
+                              for c in cols_m_original_dedup
+                              if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns]
+            # Eliminar duplicados si el mapeo causa que varias 'Menciona.X' apunten a la misma
+            cols_m_renamed = list(dict.fromkeys(cols_m_renamed))
+
             cols_to_melt = [id_auth] + cols_m_renamed
-            if len(cols_to_melt) > 1: # Si encontramos al menos una col 'menciona' renombrada
+            if len(cols_to_melt) > 1: # Si encontramos al menos una col 'menciona' renombrada y mapeada
                 melted = df_textual_renamed[cols_to_melt].melt(id_vars=[id_auth], var_name='Pregunta_Std', value_name='Respuesta')
                 final_abiertas = melted.dropna(subset=['Respuesta'])
                 # Convertir respuesta a string para evitar errores en display
