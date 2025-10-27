@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.10 para Streamlit (Fix V5.1 - Selección explícita primera columna)
+# Versión Atlantia 2.11 para Streamlit (Fix V5.1 - Selección explícita por posición)
 
 import streamlit as st
 import pandas as pd
@@ -144,8 +144,8 @@ atlantia_css = """
     }
      .stTextInput > div > div > input:focus,
      .stTextArea > div > div > textarea:focus {
-          border-color: var(--atlantia-violet) !important;
-          box-shadow: 0 0 0 2px rgba(101, 70, 195, 0.3) !important;
+         border-color: var(--atlantia-violet) !important;
+         box-shadow: 0 0 0 2px rgba(101, 70, 195, 0.3) !important;
      }
 
     /* File Uploader (Adaptativo) */
@@ -457,7 +457,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         df_numerico = df_numerico_full[num_ex] # Asumiendo que num_ex ya está validado
 
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada (después del renombrado)."); st.stop()
-   
+    
     # --- VALIDACIONES (V1-V13) ---
     
     # V1: Tamaño
@@ -520,31 +520,49 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     col_d_edad_std = '[age]' # Nombre estándar
     
     try:
-        # --- INICIO CORRECCIÓN v2.10 ---
-        # Buscar el nombre REAL de la columna de rango de edad (la primera que coincida)
-        actual_col_g_edad = next((col for col in df_textual.columns if col == col_g_edad_std), None)
-        actual_col_d_edad = next((col for col in df_textual.columns if col == col_d_edad_std), None)
+        # --- INICIO CORRECCIÓN v2.11 (Fix V5.1 - Duplicados) ---
         
-        # Verificar que AMBAS columnas existen con sus nombres actuales
-        if actual_col_g_edad is None:
+        # 1. Encontrar la POSICIÓN de la primera columna que coincida
+        pos_g_edad = -1
+        pos_d_edad = -1
+        
+        # Iterar para encontrar el primer índice (posición)
+        # Usamos df_textual (el subconjunto) que ya fue definido
+        for i, col_name in enumerate(df_textual.columns):
+            if pos_g_edad == -1 and col_name == col_g_edad_std:
+                pos_g_edad = i
+            if pos_d_edad == -1 and col_name == col_d_edad_std:
+                pos_d_edad = i
+            # Optimización: si encontramos ambas, salimos
+            if pos_g_edad != -1 and pos_d_edad != -1:
+                break
+        
+        # 2. Verificar que AMBAS columnas se encontraron
+        if pos_g_edad == -1:
              raise KeyError(f"No se encontró la columna de rango de edad ('{col_g_edad_std}' o mapeada)")
-        if actual_col_d_edad is None:
+        if pos_d_edad == -1:
              raise KeyError(f"No se encontró la columna de edad exacta ('{col_d_edad_std}' o mapeada)")
-        # --- FIN CORRECCIÓN v2.10 ---
 
-        # Usar los nombres ACTUALES encontrados
-        df_temp_edad = df_textual[[actual_col_g_edad, actual_col_d_edad]].copy()
-        df_temp_edad[actual_col_d_edad] = pd.to_numeric(df_temp_edad[actual_col_d_edad], errors='coerce')
+        # 3. Crear el DataFrame temporal USANDO POSICIONES (iloc)
+        # Esto garantiza que solo tomamos 2 columnas, incluso si los nombres están duplicados.
+        df_temp_edad = df_textual.iloc[:, [pos_g_edad, pos_d_edad]].copy()
         
-        # Agrupar usando el nombre ACTUAL de la columna de rango
-        grouped_edad = df_temp_edad.groupby(actual_col_g_edad, dropna=False)
+        # 4. Renombrar las columnas (que ahora son únicas posicionalmente) a los NOMBRES ESTÁNDAR
+        # Esto hace que el resto del código funcione sin importar cómo se llamaban.
+        df_temp_edad.columns = [col_g_edad_std, col_d_edad_std]
         
-        if actual_col_d_edad in grouped_edad:
-             rep_edad = grouped_edad[actual_col_d_edad].agg(['count', 'min', 'max']) 
-             rep_edad.columns = ['Total', 'Min', 'Max']
-             content_v5 += rep_edad.to_html(classes='df-style')
-        else:
-             raise ValueError(f"La columna '{actual_col_d_edad}' no se encontró después de agrupar por '{actual_col_g_edad}'.")
+        # --- FIN CORRECCIÓN v2.11 ---
+
+        # Ahora el resto del código usa los nombres estándar
+        df_temp_edad[col_d_edad_std] = pd.to_numeric(df_temp_edad[col_d_edad_std], errors='coerce')
+        
+        # Agrupar usando el nombre ESTÁNDAR de la columna de rango
+        grouped_edad = df_temp_edad.groupby(col_g_edad_std, dropna=False)
+        
+        # Accedemos directamente a la columna de agregación
+        rep_edad = grouped_edad[col_d_edad_std].agg(['count', 'min', 'max']) 
+        rep_edad.columns = ['Total', 'Min', 'Max']
+        content_v5 += rep_edad.to_html(classes='df-style')
 
     except KeyError as e: 
         status_v5 = "Error"
@@ -845,9 +863,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         status_v13 = "Error" 
         content_v13 = f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada." 
     except Exception as e:
-            status_v13 = "Error" 
-            content_v13 = f"<span class='status-error-inline'>[ERROR inesperado]</span> {e}" 
-            
+         status_v13 = "Error" 
+         content_v13 = f"<span class='status-error-inline'>[ERROR inesperado]</span> {e}" 
+         
     validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
 
 
@@ -864,7 +882,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         if v['key'] == "Duplicados en [panelistid]":
             new_title = f"Validación {i + 1}: {v['key']}"
         else:
-             new_title = f"Validación {i + 1}: {v['key']}"
+            new_title = f"Validación {i + 1}: {v['key']}"
         final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
 
     correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
