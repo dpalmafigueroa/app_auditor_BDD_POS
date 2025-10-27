@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.24 para Streamlit (Corrección KeyError en reporte detallado)
+# Versión Atlantia 2.25 para Streamlit (Corrección Mapeo Edad Honduras + Duplicados)
 
 import streamlit as st
 import pandas as pd
@@ -34,26 +34,29 @@ def deduplicate_columns(df):
     for col in cols:
         count = counts[col]
         original_col_name = col # Guardar nombre original por si acaso
-        col = str(col) # Asegurarse que es string para evitar errores
+        # Asegurarse que es string para evitar errores con nombres numéricos
+        col_str = str(col)
 
         if count > 1:
-            suffix_num = col_counts_so_far[col]
+            suffix_num = col_counts_so_far[col_str]
             if suffix_num > 0: # Solo añadir sufijo a partir de la segunda ocurrencia
-                new_name = f"{col}.{suffix_num}"
+                new_name = f"{col_str}.{suffix_num}"
                 new_cols.append(new_name)
-                if original_col_name not in [r[0] for r in renamed_info]: # Registrar solo una vez por nombre original
+                # Registrar info de renombrado solo una vez por nombre original
+                is_already_registered = any(r[0] == original_col_name for r in renamed_info)
+                if not is_already_registered:
                     renamed_info.append((original_col_name, new_name))
             else:
-                new_cols.append(col) # La primera se queda igual
-            col_counts_so_far[col] += 1
+                new_cols.append(col_str) # La primera se queda igual (como string)
+            col_counts_so_far[col_str] += 1
         else:
-            new_cols.append(col) # Si no está duplicada, se queda igual
+            new_cols.append(col_str) # Si no está duplicada, se queda igual (como string)
 
     df.columns = new_cols
     # Advertir si se renombraron columnas
     if renamed_info:
-        renamed_originals = list(set([r[0] for r in renamed_info]))
-        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {renamed_originals}. Se usará la primera ocurrencia ('{renamed_originals[0]}') para el mapeo.")
+        renamed_originals = list(set([str(r[0]) for r in renamed_info])) # Convertir a string para join
+        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {', '.join(renamed_originals)}. Se usará la primera ocurrencia para el mapeo.")
     return df
 # --- FIN FUNCIÓN DUPLICADOS ---
 
@@ -385,16 +388,18 @@ COLUMN_MAPPING = {
     'Base Textual': {
         '[auth]': {'Panamá': '[auth]', 'México': '[auth]', 'Colombia': '[auth]', 'Ecuador': '[auth]', 'Perú': '[auth]', 'R. Dominicana': '[auth]', 'Honduras': '[auth]', 'El Salvador': '[auth]', 'Guatemala': '[auth]', 'Colombia Minors': 'id'},
         'startdate': {'Panamá': 'startdate', 'México': 'startdate', 'Colombia': 'startdate', 'Ecuador': 'startdate', 'Perú': 'startdate', 'R. Dominicana': 'startdate', 'Honduras': 'startdate', 'El Salvador': 'startdate', 'Guatemala': 'startdate', 'Colombia Minors': 'startdate'},
-        'Por favor, selecciona el rango de edad en el que te encuentras:': {'Panamá': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'México': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Ecuador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Perú': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'R. Dominicana': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Honduras': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'El Salvador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Guatemala': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia Minors': 'AGErange'},
-        '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', 'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
+        # --- INICIO CORRECCIÓN HONDURAS EDAD v2.25 ---
+        'Por favor, selecciona el rango de edad en el que te encuentras:': {'Panamá': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'México': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Ecuador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Perú': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'R. Dominicana': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Honduras': 'Please select the range of which your age is part of:', # <-- Corregido para Honduras
+         'El Salvador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Guatemala': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia Minors': 'AGErange'},
+        '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', # <-- Corregido para Honduras
+         'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
+        # --- FIN CORRECCIÓN HONDURAS EDAD v2.25 ---
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
-        # --- CORRECCIÓN FINAL HONDURAS GEO v2.21 ---
-        'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia
+        'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia (v2.21)
          'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
-        'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Estado', # <-- Columna de Departamento/Ciudad
+        'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Estado', # <-- Columna de Departamento/Ciudad (v2.21)
          'El Salvador': 'ESTADO', 'Guatemala': 'state', 'Colombia Minors': 'Departamento:'},
-        # --- FIN CORRECCIÓN HONDURAS GEO v2.21 ---
         'Region2': {'Perú': 'region2'},
         'Origen': {'Panamá': 'Origen', 'México': 'Origen', 'Colombia': '', 'Ecuador': 'Origen del registro', 'Perú': '', 'R. Dominicana': '', 'Honduras': '', 'El Salvador': '', 'Guatemala': '', 'Colombia Minors': ''},
         # Columnas como 'Proveedor' y '[panelistid]' no están en el CSV de mapeo,
@@ -550,6 +555,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
          st.stop()
 
     # --- VALIDACIONES (V1-V13) ---
+    # (El resto de las validaciones V1-V13 permanecen igual que en v2.21)
 
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
@@ -1248,7 +1254,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
              content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
         # --- FIN CORRECCIÓN v2.24 ---
         # Reemplazar <br> y \n para seguridad HTML
-        safe_content = content_detalle.replace('<br>', '<br/>').replace('\n', '')
+        safe_content = str(content_detalle).replace('<br>', '<br/>').replace('\n', '') # Asegurar que sea string
         # Eliminar posible doble <br/> si ya existe
         safe_content = safe_content.replace('<br/><br/>', '<br/>')
 
