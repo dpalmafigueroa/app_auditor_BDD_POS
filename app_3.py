@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.6 para Streamlit (Corrección nombre PanelistID)
+# Versión Atlantia 2.7 para Streamlit (Corrección V5 - Tipo de dato numérico en [age])
 
 import streamlit as st
 import pandas as pd
@@ -518,16 +518,36 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
     validation_results.append({'key': key_v4, 'status': status_v4, 'content': content_v4})
 
-    # V5: Agrupaciones (ACTUALIZADA)
+    # V5: Agrupaciones (ACTUALIZADA CON FIX DE ERROR)
     key_v5 = "Agrupaciones"; content_v5 = ""; status_v5 = "Correcto"
     # 5.1 Edad
     content_v5 += "<h3>5.1: Edad vs [age]</h3>"; col_g_edad = "Por favor, selecciona el rango de edad en el que te encuentras:"; col_d_edad = '[age]'
     try:
-        if not all(c in df_textual.columns for c in [col_g_edad, col_d_edad]): raise KeyError("Edad/[age]")
-        rep_edad = df_textual.groupby(col_g_edad)[col_d_edad].agg(['count', 'min', 'max']); rep_edad.columns = ['Total', 'Min', 'Max']
+        if not all(c in df_textual.columns for c in [col_g_edad, col_d_edad]): 
+            raise KeyError(f"No se encontraron '{col_g_edad}' o '{col_d_edad}'")
+        
+        # --- INICIO DE LA CORRECCIÓN ---
+        # Aseguramos que la columna [age] sea numérica antes de agregar
+        # 'errors=coerce' convierte cualquier texto (ej. "No sabe") en NaN
+        df_textual_copy = df_textual.copy() # Evitar SettingWithCopyWarning
+        df_textual_copy[col_d_edad] = pd.to_numeric(df_textual_copy[col_d_edad], errors='coerce')
+        # --- FIN DE LA CORRECCIÓN ---
+        
+        # Usamos el dataframe copiado y modificado para la agregación
+        rep_edad = df_textual_copy.groupby(col_g_edad)[col_d_edad].agg(['count', 'min', 'max'])
+        rep_edad.columns = ['Total', 'Min', 'Max'] # Esta línea ahora es segura
+        
         content_v5 += rep_edad.to_html(classes='df-style')
-    except KeyError as e: status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
+        
+    except KeyError as e: 
+        status_v5 = "Error"
+        content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
+    except Exception as e_agg: # Captura más amplia por si algo más falla en la agregación
+        status_v5 = "Error"
+        content_v5 += f"<span class='status-error-inline'>[ERROR Agregación Edad]</span> {e_agg}<br>"
+        
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
+    
     # 5.2 NSE
     content_v5 += "<h3>5.2: NSE vs NSE2</h3>"; col_g_nse = 'NSE'; col_d_nse = 'NSE2'
     try:
