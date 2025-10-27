@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.12 para Streamlit (Fix V5.1 - Selección posicional y Corrección Geo Ecuador)
+# Versión Atlantia 2.13 para Streamlit (Fix V5.1 - Selección posicional y Corrección Geo Ecuador v2)
 
 import streamlit as st
 import pandas as pd
@@ -274,9 +274,9 @@ CLASIFICACIONES_POR_PAIS = {
     'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosi', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
     
-    # --- INICIO CORRECCIÓN ECUADOR v2.12 ---
-    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungahua']},
-    # --- FIN CORRECCIÓN ECUADOR v2.12 ---
+    # --- INICIO CORRECCIÓN ECUADOR v2.13 ---
+    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
+    # --- FIN CORRECCIÓN ECUADOR v2.13 ---
     
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
@@ -666,7 +666,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if no_enc: status_v7 = "Error"; content_v7 += f"<span class='status-error-inline'>[ERROR]</span> No encontradas: {', '.join(no_enc)}<br>"
     if nulos_det:
         if status_v7 == "Correcto": status_v7 = "Incorrecto"
-        content_v7 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Nulos:<br><ul>"
+        content_v7 += f"<span class'status-incorrecto-inline'>[Incorrecto]</span> Nulos:<br><ul>"
         for item in nulos_det:
             content_v7 += f"<li><b>{item['col']}</b>: {item['cant']}";
             if item['ids']: ids_str = ", ".join(map(str, item['ids'])); content_v7 += f"<br>- IDs: <b>{ids_str}</b>"
