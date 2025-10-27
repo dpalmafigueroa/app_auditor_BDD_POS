@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.17 para Streamlit (Corrección Final Geo Guatemala - 3 Regiones)
+# Versión Atlantia 2.18 para Streamlit (Corrección Definitiva Geo Guatemala - 5 Regiones)
 
 import streamlit as st
 import pandas as pd
@@ -277,13 +277,15 @@ CLASIFICACIONES_POR_PAIS = {
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
-    # --- INICIO CORRECCIÓN GUATEMALA v2.17 (Final - 3 Regiones) ---
+    # --- INICIO CORRECCIÓN GUATEMALA v2.18 (Definitiva - 5 Regiones) ---
     'Guatemala': {
         'Metro': ['Guatemala'],
-        'Nor Oriente': ['Alta Verapaz', 'Baja Verapaz', 'El Progreso', 'Izabal', 'Petén', 'Zacapa', 'Chimaltenango', 'Huehuetenango', 'Quetzaltengango', 'Quiché', 'Sacatepequez', 'San Marcos', 'Sololá', 'Totonicapán'],
-        'Sur Occidente': ['Retalhuleu', 'Suchitepéquez', 'Santa Rosa', 'Jalapa', 'Jutiapa', 'Chiquimula', 'Escuintla']
+        'Nor Oriente': ['Petén', 'Alta Verapaz', 'Zacapa', 'El Progreso', 'Izabal', 'Baja Verapaz'],
+        'Nor Occidente': ['San Marcos', 'Quetzaltengango', 'Chimaltenango', 'Quiché', 'Totonicapán', 'Huehuetenango', 'Sololá', 'Sacatepequez'],
+        'Sur Occidente': ['Suchitepéquez', 'Retalhuleu'],
+        'Sur Oriente': ['Chiquimula', 'Jutiapa', 'Jalapa', 'Santa Rosa', 'Escuintla']
     },
-    # --- FIN CORRECCIÓN GUATEMALA v2.17 ---
+    # --- FIN CORRECCIÓN GUATEMALA v2.18 ---
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
@@ -374,7 +376,7 @@ with col_dl1:
         df_vol = pd.DataFrame(reglas_vol); df_vol.columns = ['Columna', 'Condición', 'Límite']
         excel_vol = to_excel(df_vol)
         st.download_button(label="Descargar Reglas Volumetría (.xlsx)", data=excel_vol, file_name=f'reglas_volumetria_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_vol')
-    else: st.info(f"No hay reglas de volumetría para {pais_seleccionado_display}.")
+    else: st.info(f"No hay regras de volumetría para {pais_seleccionado_display}.")
 with col_dl2:
     reglas_geo = CLASIFICACIONES_POR_PAIS.get(pais_seleccionado_display, {})
     if reglas_geo:
@@ -811,7 +813,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     errores_umbrales = []
     reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
     if not reglas_pais:
-        status_v11 = "Info"; content_v11 = f"<span class='status-info-inline'>[INFO]</span> No hay reglas de volumetría para {pais_seleccionado_display}." 
+        status_v11 = "Info"; content_v11 = f"<span class='status-info-inline'>[INFO]</span> No hay regras de volumetría para {pais_seleccionado_display}." 
     else:
         id_col_ok_v11 = id_unico in df_numerico_full.columns
         if not id_col_ok_v11: content_v11 += f"<span class='status-error-inline'>[WARN]</span> Col '{id_unico}' no encontrada.<br>"
