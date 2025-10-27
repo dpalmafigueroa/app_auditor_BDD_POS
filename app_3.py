@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.25 para Streamlit (Corrección Mapeo Edad Honduras + Duplicados)
+# Versión Atlantia 2.26 para Streamlit (Doble Deduplicación + Mapeo Edad Honduras)
 
 import streamlit as st
 import pandas as pd
@@ -21,9 +21,10 @@ def to_excel(df):
     return processed_data
 
 # --- FUNCIÓN PARA MANEJAR COLUMNAS DUPLICADAS ---
-def deduplicate_columns(df):
+def deduplicate_columns(df, operation_name="lectura"):
     """
     Renombra columnas duplicadas añadiendo un sufijo numérico (.1, .2, etc.).
+    Asegura que todos los nombres de columnas sean strings.
     """
     cols = pd.Series(df.columns)
     counts = Counter(cols)
@@ -35,7 +36,7 @@ def deduplicate_columns(df):
         count = counts[col]
         original_col_name = col # Guardar nombre original por si acaso
         # Asegurarse que es string para evitar errores con nombres numéricos
-        col_str = str(col)
+        col_str = str(col) 
 
         if count > 1:
             suffix_num = col_counts_so_far[col_str]
@@ -56,7 +57,7 @@ def deduplicate_columns(df):
     # Advertir si se renombraron columnas
     if renamed_info:
         renamed_originals = list(set([str(r[0]) for r in renamed_info])) # Convertir a string para join
-        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {', '.join(renamed_originals)}. Se usará la primera ocurrencia para el mapeo.")
+        st.warning(f"Se detectaron y renombraron columnas duplicadas durante la {operation_name}: {', '.join(renamed_originals)}. Se usará la primera ocurrencia para el mapeo.")
     return df
 # --- FIN FUNCIÓN DUPLICADOS ---
 
@@ -388,12 +389,32 @@ COLUMN_MAPPING = {
     'Base Textual': {
         '[auth]': {'Panamá': '[auth]', 'México': '[auth]', 'Colombia': '[auth]', 'Ecuador': '[auth]', 'Perú': '[auth]', 'R. Dominicana': '[auth]', 'Honduras': '[auth]', 'El Salvador': '[auth]', 'Guatemala': '[auth]', 'Colombia Minors': 'id'},
         'startdate': {'Panamá': 'startdate', 'México': 'startdate', 'Colombia': 'startdate', 'Ecuador': 'startdate', 'Perú': 'startdate', 'R. Dominicana': 'startdate', 'Honduras': 'startdate', 'El Salvador': 'startdate', 'Guatemala': 'startdate', 'Colombia Minors': 'startdate'},
-        # --- INICIO CORRECCIÓN HONDURAS EDAD v2.25 ---
-        'Por favor, selecciona el rango de edad en el que te encuentras:': {'Panamá': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'México': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Ecuador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Perú': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'R. Dominicana': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Honduras': 'Please select the range of which your age is part of:', # <-- Corregido para Honduras
-         'El Salvador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Guatemala': 'Por favor, selecciona el rango de edad en el que te encuentras:', 'Colombia Minors': 'AGErange'},
-        '[age]': {'Panamá': '[age]', 'México': 'Edad:', 'Colombia': 'Edad en el que te encuentras:', 'Ecuador': 'EDAD', 'Perú': 'Edad:', 'R. Dominicana': 'AGE', 'Honduras': 'EDAD', # <-- Corregido para Honduras
-         'El Salvador': 'AGE', 'Guatemala': 'AGE', 'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'},
-        # --- FIN CORRECCIÓN HONDURAS EDAD v2.25 ---
+        # --- INICIO CORRECCIÓN HONDURAS EDAD v2.26 ---
+        'Por favor, selecciona el rango de edad en el que te encuentras:': {
+            'Panamá': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'México': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Colombia': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Ecuador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Perú': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'R. Dominicana': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Honduras': 'Por favor, selecciona el rango de edad en el que te encuentras:', # <-- Corregido para Honduras según tu último input
+            'El Salvador': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Guatemala': 'Por favor, selecciona el rango de edad en el que te encuentras:', 
+            'Colombia Minors': 'AGErange'
+        },
+        '[age]': {
+            'Panamá': '[age]', 
+            'México': 'Edad:', 
+            'Colombia': 'Edad en el que te encuentras:', 
+            'Ecuador': 'EDAD', 
+            'Perú': 'Edad:', 
+            'R. Dominicana': 'AGE', 
+            'Honduras': 'EDAD', # <-- Corregido para Honduras
+            'El Salvador': 'AGE', 
+            'Guatemala': 'AGE', 
+            'Colombia Minors': 'A partir de esta sección te pediremos que respondas pensando sobre el consumo de bebidas de tus hijos entre 8 y 17 años.Si tienes más de 1 hijo en esta edad te pediremos que te enfoques en uno de tus hijos para responder sobre su consumo. ¿Qué edad t'
+        },
+        # --- FIN CORRECCIÓN HONDURAS EDAD v2.26 ---
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
         'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia (v2.21)
@@ -457,8 +478,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
 
         # --- APLICAR DEDUPLICACIÓN DE COLUMNAS (v2.23) ---
-        df_numerico_full = deduplicate_columns(df_numerico_full.copy()) # Usar .copy() para evitar modificar el original si se vuelve a usar
-        df_textual_full = deduplicate_columns(df_textual_full.copy())
+        df_numerico_full = deduplicate_columns(df_numerico_full.copy(), operation_name="lectura (Numérico)")
+        df_textual_full = deduplicate_columns(df_textual_full.copy(), operation_name="lectura (Textual)")
         # --- FIN DEDUPLICACIÓN ---
 
     except Exception as e: st.error(f"Error al leer o pre-procesar archivos: {e}"); st.stop()
@@ -497,8 +518,16 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         # Renombrar usando los nombres originales (sin sufijo) que sí existen
         df_numerico_renamed = df_numerico_full.rename(columns=rename_map_num)
         df_textual_renamed = df_textual_full.rename(columns=rename_map_txt)
+
+        # --- INICIO CORRECCIÓN v2.26: DEDUPLICAR OTRA VEZ ---
+        # Volver a ejecutar deduplicate para manejar duplicados creados POR EL RENOMBRADO
+        # (ej. si 'EDAD' se renombra a '[age]' y ya existía una columna '[age]')
+        df_numerico_renamed = deduplicate_columns(df_numerico_renamed.copy(), operation_name="renombrado (Numérico)")
+        df_textual_renamed = deduplicate_columns(df_textual_renamed.copy(), operation_name="renombrado (Textual)")
+        # --- FIN CORRECCIÓN v2.26 ---
+
     except Exception as e:
-        st.error(f"Error durante el proceso de renombrar columnas después de la deduplicación: {e}")
+        st.error(f"Error during rename or post-rename deduplication: {e}")
         st.stop()
     # --- FIN DE LÓGICA DE RENOMBRADO ---
 
@@ -540,8 +569,13 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     num_cols_extra_std.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
 
     # Seleccionar solo las columnas ESTÁNDAR que existen en los DFs renombrados
+    # IMPORTANTE: Usar .loc para evitar problemas con columnas duplicadas si el chequeo fallara
     num_ex = [c for c in num_cols_base + list(set(num_cols_extra_std)) if c in df_numerico_renamed.columns]
     txt_ex = [c for c in txt_cols_std if c in df_textual_renamed.columns]
+
+    # Prevenir selección de duplicados explícitamente
+    num_ex = list(dict.fromkeys(num_ex)) # Mantener orden pero quitar duplicados
+    txt_ex = list(dict.fromkeys(txt_ex)) # Mantener orden pero quitar duplicados
 
     try:
         # Crear los dataframes finales df_numerico y df_textual usando los DFs RENOMBRADOS
@@ -555,7 +589,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
          st.stop()
 
     # --- VALIDACIONES (V1-V13) ---
-    # (El resto de las validaciones V1-V13 permanecen igual que en v2.21)
 
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
@@ -672,13 +705,16 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     try:
         # Ya se verificó que las columnas existen después del renombrado y antes de crear df_textual
         # Ahora usamos directamente los nombres estándar en df_textual
+        # df_textual[col_g_edad_std] y df_textual[col_d_edad_std] deberían ser Series únicas
         df_temp_edad = df_textual[[col_g_edad_std, col_d_edad_std]].copy()
         df_temp_edad[col_d_edad_std] = pd.to_numeric(df_temp_edad[col_d_edad_std], errors='coerce')
 
         # Agrupar usando el nombre ESTÁNDAR de la columna de rango
+        # df_temp_edad[col_g_edad_std] es una Serie, por lo que groupby funciona
         grouped_edad = df_temp_edad.groupby(col_g_edad_std, dropna=False)
 
         # Accedemos directamente a la columna de agregación
+        # grouped_edad[col_d_edad_std] es un SeriesGroupBy
         rep_edad = grouped_edad[col_d_edad_std].agg(['count', 'min', 'max'])
         rep_edad.columns = ['Total', 'Min', 'Max']
         # Llenar NaN con texto indicativo para la tabla HTML
@@ -1170,7 +1206,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                     df_dups_v13 = df_check[dups_mask_v13]
                     ids_unicos_duplicados = df_dups_v13[col_panel].nunique()
 
-                    content_v13 += f"<span class='status-info-inline'>[REPORTE]</span> Se encontraron <b>{total_filas_duplicadas}</b> filas (de {total_filas_validas} no nulas) con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
+                    content_v13 += f"<span class'status-info-inline'>[REPORTE]</span> Se encontraron <b>{total_filas_duplicadas}</b> filas (de {total_filas_validas} no nulas) con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
                     porcentaje_dup = (total_filas_duplicadas / total_filas_validas) * 100 if total_filas_validas > 0 else 0
                     content_v13 += f"- Porcentaje Duplicado (sobre no nulos): <b>{porcentaje_dup:.2f}%</b><br><br>"
                     content_v13 += f"Reporte de '{col_panel}' duplicados y su frecuencia:<br>"
@@ -1251,7 +1287,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         content_detalle = v['content']
         # --- CORRECCIÓN v2.24: Usar v['title'] para la comprobación ---
         if 'title' in v and "Agrupaciones" in v['title']:
-             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
+             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class'sub-heading'>5.4:")
         # --- FIN CORRECCIÓN v2.24 ---
         # Reemplazar <br> y \n para seguridad HTML
         safe_content = str(content_detalle).replace('<br>', '<br/>').replace('\n', '') # Asegurar que sea string
