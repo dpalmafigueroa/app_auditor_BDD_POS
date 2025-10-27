@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.7 para Streamlit (Corrección V5 - Tipo de dato numérico en [age])
+# Versión Atlantia 2.8 para Streamlit (Fix V5.1, Update Geo MX, Cambios V13)
 
 import streamlit as st
 import pandas as pd
@@ -200,6 +200,8 @@ atlantia_css = """
 
     .status-info { background-color: var(--validation-info-bg); border-left-color: var(--validation-info-border); }
     .status-info h3, .status-info span, .status-info p, .status-info li, .status-info .df-style th, .status-info .df-style td { color: var(--validation-info-text) !important; }
+    .status-info-inline { color: var(--validation-info-text) !important; font-weight: bold; } /* Añadido para V13 */
+
 
     .status-error { background-color: var(--validation-error-bg); border-left-color: var(--validation-error-border); }
     .status-error h3, .status-error span, .status-error p, .status-error li, .status-error .df-style th, .status-error .df-style td { color: var(--validation-error-text) !important; }
@@ -262,14 +264,14 @@ st.markdown("""
 * **Suma Ponderador por demográfico:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.
 * **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
 * **Duplicados en IDs:** Verifica que `Unico` (Num) y `[auth]` (Txt) no tengan valores repetidos.
-* **Duplicados [panelistid]:** Revisa `[panelistid]` (Txt) por duplicados y reporta el conteo.
+* **Duplicados [panelistid]:** Reporta (Info) `[panelistid]` (Txt) duplicados y su conteo.
 """)
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
 CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
-    'México': {'Central/Bajio': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
+    'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosí', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']}, # <-- CAMBIO APLICADO AQUÍ
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
     'Ecuador': {'Costa/Coast': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra/ Highland': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungahua']},
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
@@ -403,63 +405,41 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         df_textual_full = pd.read_excel(io.BytesIO(uploaded_file_txt.getvalue()))
     except Exception as e: st.error(f"Error al leer archivos: {e}"); st.stop()
     
-    # --- (NUEVO) LÓGICA DE RENOMBRADO DINÁMICO ---
-    # Crear mapas de renombrado inversos para el país seleccionado
+    # --- LÓGICA DE RENOMBRADO DINÁMICO ---
     rename_map_num = {}
     rename_map_txt = {}
-
-    # Mapeo Numérico
     for standard_name, country_mappings in COLUMN_MAPPING['Base Numérica'].items():
         if pais_clave_interna in country_mappings:
             country_specific_name = country_mappings[pais_clave_interna]
-            # Solo renombrar si el nombre específico existe en el excel y no es vacío
             if country_specific_name and country_specific_name in df_numerico_full.columns:
                 rename_map_num[country_specific_name] = standard_name
-
-    # Mapeo Textual
     for standard_name, country_mappings in COLUMN_MAPPING['Base Textual'].items():
         if pais_clave_interna in country_mappings:
             country_specific_name = country_mappings[pais_clave_interna]
             if country_specific_name and country_specific_name in df_textual_full.columns:
                 rename_map_txt[country_specific_name] = standard_name
-
-    # Aplicar el renombrado a los DataFrames completos
     try:
         df_numerico_full.rename(columns=rename_map_num, inplace=True)
         df_textual_full.rename(columns=rename_map_txt, inplace=True)
-        
-        # Ocultamos los mensajes de mapeo para una UI más limpia
-        # st.write("Mapeo de columnas aplicado (Numérico):", rename_map_num)
-        # st.write("Mapeo de columnas aplicado (Textual):", rename_map_txt)
     except Exception as e:
         st.error(f"Error al renombrar columnas: {e}")
         st.stop()
     # --- FIN DE LÓGICA DE RENOMBRADO ---
 
-
-    # --- Optimización de Carga (AHORA USA NOMBRES ESTÁNDAR) ---
-    # Columnas base (Esenciales)
+    # --- Optimización de Carga ---
     num_cols_base = ['Unico', 'lastpage', 'lastpage_Parte2']
-    # Columnas textuales optimizadas
-    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor', 'Region2', '[panelistid]'] # Añadidos
-    # Columnas numéricas extra
+    txt_cols = ['[auth]', 'startdate', "Por favor, selecciona el rango de edad en el que te encuentras:", '[age]', 'NSE', 'NSE2', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD', 'Origen', 'Proveedor', 'Region2', '[panelistid]'] 
     num_cols_extra = ['Ponderador', 'NSE', 'gender', 'AGErange', 'Region']
     num_cols_extra.extend([rule['col'] for rule in THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])])
-    
-    # Combinar base + extra (evitando duplicados)
     num_cols = num_cols_base + list(set([c for c in num_cols_extra if c in df_numerico_full.columns and c not in num_cols_base]))
-    
-    # Filtrar solo las que existen
     num_ex = [c for c in num_cols if c in df_numerico_full.columns]; 
     txt_ex = [c for c in txt_cols if c in df_textual_full.columns]
     
     try:
-        # DataFrames optimizados
         df_numerico = df_numerico_full[num_ex]
         df_textual = df_textual_full[txt_ex]
     except KeyError as e: st.error(f"Columna base esencial {e} no encontrada (después del renombrado)."); st.stop()
-    # Nota: df_numerico_full y df_textual_full siguen disponibles con nombres estándar
-
+   
     # --- VALIDACIONES (V1-V13) ---
     
     # V1: Tamaño
@@ -501,13 +481,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     key_v4 = "Periodo Campo ('startdate')"; content_v4 = ""; status_v4 = "Info"; col_fecha = 'startdate'
     locale_usado = ''; formato_fecha = '%d/%b/%Y %H:%M'
     try:
-        # Intenta configurar el locale para español (para Mac/Linux y luego Windows)
-        # Mac/Linux a menudo usa 'es_ES.UTF-8'
         try: locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8'); locale_usado = 'es_ES.UTF-8'; formato_fecha = '%d de %B de %Y, %I:%M %p'
         except:
-            # Windows a menudo usa 'es' o 'es_ES'
             try: locale.setlocale(locale.LC_TIME, 'es'); locale_usado = 'es'; formato_fecha = '%d de %B de %Y, %I:%M %p'
-            # Fallback al locale por defecto del sistema
             except: locale.setlocale(locale.LC_TIME, ''); locale_usado = 'Sistema'
         
         if col_fecha not in df_textual.columns: raise KeyError(f"'{col_fecha}' ausente.")
@@ -518,31 +494,37 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except Exception as e_loc: status_v4 = "Error"; content_v4 += f"<span class='status-error-inline'>[ERROR Locale]</span> {e_loc}.<br>"
     validation_results.append({'key': key_v4, 'status': status_v4, 'content': content_v4})
 
-    # V5: Agrupaciones (ACTUALIZADA CON FIX DE ERROR)
+    # V5: Agrupaciones (ACTUALIZADA CON FIX DE ERROR V2)
     key_v5 = "Agrupaciones"; content_v5 = ""; status_v5 = "Correcto"
     # 5.1 Edad
-    content_v5 += "<h3>5.1: Edad vs [age]</h3>"; col_g_edad = "Por favor, selecciona el rango de edad en el que te encuentras:"; col_d_edad = '[age]'
+    content_v5 += "<h3>5.1: Edad vs [age]</h3>"; 
+    col_g_edad = "Por favor, selecciona el rango de edad en el que te encuentras:"
+    col_d_edad = '[age]'
     try:
         if not all(c in df_textual.columns for c in [col_g_edad, col_d_edad]): 
             raise KeyError(f"No se encontraron '{col_g_edad}' o '{col_d_edad}'")
         
-        # --- INICIO DE LA CORRECCIÓN ---
-        # Aseguramos que la columna [age] sea numérica antes de agregar
-        # 'errors=coerce' convierte cualquier texto (ej. "No sabe") en NaN
-        df_textual_copy = df_textual.copy() # Evitar SettingWithCopyWarning
-        df_textual_copy[col_d_edad] = pd.to_numeric(df_textual_copy[col_d_edad], errors='coerce')
-        # --- FIN DE LA CORRECCIÓN ---
+        # Copiamos solo las columnas necesarias para evitar warnings y mejorar rendimiento
+        df_temp_edad = df_textual[[col_g_edad, col_d_edad]].copy()
         
-        # Usamos el dataframe copiado y modificado para la agregación
-        rep_edad = df_textual_copy.groupby(col_g_edad)[col_d_edad].agg(['count', 'min', 'max'])
-        rep_edad.columns = ['Total', 'Min', 'Max'] # Esta línea ahora es segura
+        # Aseguramos que la columna [age] sea numérica
+        df_temp_edad[col_d_edad] = pd.to_numeric(df_temp_edad[col_d_edad], errors='coerce')
+        
+        # Agrupamos (incluyendo NaN en la agrupación por si acaso) y agregamos
+        # Usamos dropna=False en groupby para incluir grupos con NaN si existieran en col_g_edad
+        # Las funciones min y max ignorarán NaN por defecto dentro de cada grupo
+        grouped_edad = df_temp_edad.groupby(col_g_edad, dropna=False)
+        rep_edad = grouped_edad[col_d_edad].agg(['count', 'min', 'max']) 
+        
+        # Renombramos las columnas de forma segura
+        rep_edad.columns = ['Total', 'Min', 'Max']
         
         content_v5 += rep_edad.to_html(classes='df-style')
         
     except KeyError as e: 
         status_v5 = "Error"
         content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
-    except Exception as e_agg: # Captura más amplia por si algo más falla en la agregación
+    except Exception as e_agg: # Captura más amplia
         status_v5 = "Error"
         content_v5 += f"<span class='status-error-inline'>[ERROR Agregación Edad]</span> {e_agg}<br>"
         
@@ -579,36 +561,26 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if status_v5 == "Correcto" and status_v5_3 not in ["Correcto", "Info"]: status_v5 = status_v5_3
     elif status_v5_3 == "Error": status_v5 = "Error"
 
-    # --- (NUEVO) 5.4: Geografía 2 (Solo Perú) ---
+    # --- 5.4: Geografía 2 (Solo Perú) ---
     if pais_clave_interna == 'Perú':
         content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
         content_v5 += f"<h3>5.4: Geografía 2 ({pais_seleccionado_display} - Region2)</h3>"
-        status_v5_4 = "Correcto" # Status local para esta sub-validación
+        status_v5_4 = "Correcto" 
         try:
             clasif_r2 = CLASIFICACIONES_PERU_REGION2
-            col_reg_r2 = 'Region2' # El nombre estándar
-            col_ciu_r2 = 'CIUDAD'  # Usamos la misma columna de ciudad
-            
+            col_reg_r2 = 'Region2'; col_ciu_r2 = 'CIUDAD'
             if not all(c in df_textual.columns for c in [col_reg_r2, col_ciu_r2]): 
                 raise KeyError(f"Columnas {col_reg_r2} o {col_ciu_r2} no encontradas para V5.4.")
-                
             err_reg_r2 = []
-            
             for idx, row in df_textual.iterrows():
                 reg, ciu = row[col_reg_r2], row[col_ciu_r2]
-                
-                # Ignorar nulos en esta validación específica
-                if pd.isna(reg) or pd.isna(ciu): 
-                    continue
-                    
+                if pd.isna(reg) or pd.isna(ciu): continue
                 if reg in clasif_r2:
                     if ciu not in clasif_r2[reg]:
                         err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"'{ciu}' no en '{reg}' (region2)"})
                 else:
-                    # Solo reportar si la región NO es nula
                     if pd.notna(reg):
                          err_reg_r2.append({'Fila': idx + 2, 'Region2': reg, 'Ciudad': ciu, 'Error': f"Región '{reg}' no válida (region2)"})
-
             if not err_reg_r2:
                 content_v5 += f"<span class='status-correcto-inline'>[Correcto]</span> Consistente (region2)."
             else:
@@ -616,16 +588,11 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                 content_v5 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> {len(err_reg_r2)} inconsistencias (region2).<br>"
                 df_err_r2 = pd.DataFrame(err_reg_r2)
                 content_v5 += "Primeras 5:<br>" + df_err_r2.head().to_html(classes='df-style', index=False)
-        
         except (KeyError, ValueError) as e: 
             status_v5_4 = "Error"
             content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
-            
-        # Actualizar el status general de V5 si V5.4 falló
-        if status_v5 == "Correcto" and status_v5_4 not in ["Correcto", "Info"]: 
-            status_v5 = status_v5_4
-        elif status_v5_4 == "Error": 
-            status_v5 = "Error"
+        if status_v5 == "Correcto" and status_v5_4 not in ["Correcto", "Info"]: status_v5 = status_v5_4
+        elif status_v5_4 == "Error": status_v5 = "Error"
     # --- FIN V5.4 ---
 
     validation_results.append({'key': key_v5, 'status': status_v5, 'content': content_v5})
@@ -793,65 +760,63 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         dups_txt = df_textual[col_txt_v12].duplicated()
         total_dups_txt = dups_txt.sum()
         if total_dups_txt > 0:
-            status_v12 = "Incorrecto"
+            status_v12 = "Incorrecto" # Mantiene el Incorrecto si ALGUNA de las dos falla
             ids_dup_txt = df_textual[dups_txt][col_txt_v12].unique()
             content_v12 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> <b>{total_dups_txt}</b> duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>Primeros 5 valores: {list(ids_dup_txt[:5])}<br>"
         else:
-            content_v12 += f"<span class='status-correcto-inline'>[Correcto]</span> Sin duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>"
-            
+             # Solo agrega el texto de correcto si no hubo error antes
+             if status_v12 == "Correcto": 
+                 content_v12 += f"<span class='status-correcto-inline'>[Correcto]</span> Sin duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>"
+             else: # Si ya era Incorrecto por numérico, solo añade info
+                 content_v12 += f"<span class='status-correcto-inline'></span> Sin duplicados en <b>'{col_txt_v12}'</b> (Txt).<br>"
+
     except KeyError as e:
         status_v12 = "Error"
-        content_v12 += f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada."
+        content_v12 = f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada." # Sobrescribe el contenido previo
     validation_results.append({'key': key_v12, 'status': status_v12, 'content': content_v12})
 
 
-    # V13: Duplicados en [panelistid] (ACTUALIZADO)
-    key_v13 = "Duplicados en [panelistid]"; content_v13 = ""; status_v13 = "Correcto"
-    col_panel = '[panelistid]'; col_auth_v13 = '[auth]' # <-- CAMBIO APLICADO
+    # V13: Duplicados en [panelistid] (ACTUALIZADO - SIEMPRE INFO, TABLA COMPLETA)
+    key_v13 = "Duplicados en [panelistid]"; content_v13 = ""; status_v13 = "Info" # <-- Status siempre Info
+    col_panel = '[panelistid]'; col_auth_v13 = '[auth]' 
     try:
         if col_panel not in df_textual_full.columns:
-            # Si [panelistid] no está en el CSV de mapeo, buscará '[panelistid]'.
-            # Si no lo encuentra, lanza el error (comportamiento correcto).
             raise KeyError(f"'{col_panel}' (Textual)")
         if col_auth_v13 not in df_textual_full.columns:
-            raise KeyError(f"'{col_auth_v13}' (Textual)") # Para conteo total
+            raise KeyError(f"'{col_auth_v13}' (Textual)") 
 
-        total_filas = len(df_textual_full) # Usamos len() que es más directo
-        
-        # Encontrar todas las filas que tienen un [panelistid] duplicado (keep=False marca todas)
+        total_filas = len(df_textual_full) 
         dups_mask = df_textual_full[col_panel].duplicated(keep=False)
         total_duplicados = dups_mask.sum()
 
         if total_duplicados > 0:
-            status_v13 = "Incorrecto"
             df_dups = df_textual_full[dups_mask]
             ids_unicos_duplicados = df_dups[col_panel].nunique()
             
-            content_v13 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Se encontraron <b>{total_duplicados}</b> filas con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
+            content_v13 += f"<span class='status-info-inline'>[REPORTE]</span> Se encontraron <b>{total_duplicados}</b> filas con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>" # Cambio a info-inline
             content_v13 += f"- Total Filas Duplicadas: <b>{total_duplicados:,}</b><br>"
             content_v13 += f"- Total Filas Encuesta: <b>{total_filas:,}</b><br>"
             content_v13 += f"- Porcentaje Duplicado: <b>{(total_duplicados / total_filas) * 100:.2f}%</b><br><br>"
-            content_v13 += f"Reporte de IDs duplicados (Top 10 más repetidos):<br>"
+            content_v13 += f"Reporte completo de IDs duplicados y su frecuencia:<br>"
             
-            # Agrupar para mostrar cuántas veces se repite cada uno
             conteo_dups = df_dups.groupby(col_panel)[col_auth_v13].count().reset_index()
             conteo_dups.columns = [col_panel, 'Veces Repetido']
             conteo_dups = conteo_dups.sort_values(by='Veces Repetido', ascending=False)
             
-            content_v13 += conteo_dups.head(10).to_html(classes='df-style', index=False)
-            if len(conteo_dups) > 10:
-                content_v13 += f"<br>... y <b>{len(conteo_dups) - 10}</b> IDs duplicados más."
+            # Muestra la tabla completa
+            content_v13 += conteo_dups.to_html(classes='df-style', index=False) 
         
         else:
-            content_v13 += f"<span class='status-correcto-inline'>[Correcto]</span> No se encontraron duplicados en <b>'{col_panel}'</b>."
+            content_v13 += f"<span class='status-info-inline'>[REPORTE]</span> No se encontraron duplicados en <b>'{col_panel}'</b>." # Cambio a info-inline
             content_v13 += f"<br>Total filas validadas: <b>{total_filas:,}</b>."
     
     except KeyError as e:
-        status_v13 = "Error"
-        content_v13 += f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada."
+        status_v13 = "Error" # Mantenemos Error si falta la columna
+        content_v13 = f"<span class='status-error-inline'>[ERROR]</span> Columna {e} no encontrada." # Sobrescribimos
     except Exception as e:
-            status_v13 = "Error"
-            content_v13 += f"<span class='status-error-inline'>[ERROR inesperado]</span> {e}"
+            status_v13 = "Error" # Mantenemos Error para otros problemas
+            content_v13 = f"<span class='status-error-inline'>[ERROR inesperado]</span> {e}" # Sobrescribimos
+            
     validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
 
 
@@ -875,7 +840,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
     correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
     info_count = sum(1 for v in validation_results if v['status'] == 'Info'); error_count = sum(1 for v in validation_results if v['status'] == 'Error')
-    total_validations = correct_count + incorrect_count + error_count; correct_pct = (correct_count / total_validations * 100) if total_validations > 0 else 0; incorrect_pct = (incorrect_count / total_validations * 100) if total_validations > 0 else 0
+    # Ajustamos el total para el cálculo de porcentaje (excluimos Info)
+    total_validations_pct = correct_count + incorrect_count + error_count 
+    correct_pct = (correct_count / total_validations_pct * 100) if total_validations_pct > 0 else 0; 
+    incorrect_pct = (incorrect_count / total_validations_pct * 100) if total_validations_pct > 0 else 0
 
     st.subheader("--- RESUMEN DE VALIDACIÓN ---", divider='violet')
     col1, col2, col3, col4 = st.columns(4)
@@ -886,7 +854,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         summary_list_html = "<div class='summary-list'><ul>";
         for v in final_numbered_results:
             icon = "✅" if v['status'] == 'Correcto' else "❌" if v['status'] == 'Incorrecto' else "⚠️" if v['status'] == 'Error' else "ℹ️"
-            summary_list_html += f"<li>{icon} <strong>{v['title']}:</strong> <span class='status-{v['status'].lower()}-inline'>{v['status']}</span></li>"
+            # Usamos la clase de estilo correspondiente al status
+            status_inline_class = f"status-{v['status'].lower()}-inline"
+            summary_list_html += f"<li>{icon} <strong>{v['title']}:</strong> <span class='{status_inline_class}'>{v['status']}</span></li>"
         summary_list_html += "</ul></div>"; st.markdown(summary_list_html, unsafe_allow_html=True)
 
     st.divider()
