@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.13 para Streamlit (Fix V5.1 - Selección posicional y Corrección Geo Ecuador v2)
+# Versión Atlantia 2.14 para Streamlit (Fix V5.2 - Selección posicional NSE/NSE2)
 
 import streamlit as st
 import pandas as pd
@@ -273,11 +273,7 @@ CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosi', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
-    
-    # --- INICIO CORRECCIÓN ECUADOR v2.13 ---
     'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
-    # --- FIN CORRECCIÓN ECUADOR v2.13 ---
-    
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
@@ -580,11 +576,36 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # 5.2 NSE
     content_v5 += "<h3>5.2: NSE vs NSE2</h3>"; col_g_nse = 'NSE'; col_d_nse = 'NSE2'
     try:
-        if not all(c in df_textual.columns for c in [col_g_nse, col_d_nse]): raise KeyError("NSE/NSE2")
-        rep_nse = pd.crosstab(df_textual[col_g_nse], df_textual[col_d_nse])
+        # --- INICIO CORRECCIÓN v2.14 (Fix V5.2 - Duplicados NSE/NSE2) ---
+        
+        # 1. Encontrar la POSICIÓN de la primera columna 'NSE' y 'NSE2'
+        pos_g_nse = -1
+        pos_d_nse = -1
+        for i, col_name in enumerate(df_textual.columns):
+            if pos_g_nse == -1 and col_name == col_g_nse:
+                pos_g_nse = i
+            if pos_d_nse == -1 and col_name == col_d_nse:
+                pos_d_nse = i
+            if pos_g_nse != -1 and pos_d_nse != -1:
+                break
+                
+        # 2. Verificar que AMBAS columnas se encontraron
+        if pos_g_nse == -1:
+             raise KeyError(f"No se encontró la columna '{col_g_nse}' (o mapeada)")
+        if pos_d_nse == -1:
+             raise KeyError(f"No se encontró la columna '{col_d_nse}' (o mapeada)")
+             
+        # 3. Usar iloc para pasar las Series (columnas por posición) a crosstab
+        rep_nse = pd.crosstab(df_textual.iloc[:, pos_g_nse], df_textual.iloc[:, pos_d_nse])
+        
+        # --- FIN CORRECCIÓN v2.14 ---
+        
         content_v5 += "Verifica consistencia:<br>" + rep_nse.to_html(classes='df-style')
     except KeyError as e:
         if status_v5 != "Error": status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
+    except Exception as e_crosstab: # Captura otros posibles errores de crosstab
+        if status_v5 != "Error": status_v5 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR Crosstab NSE]</span> {e_crosstab}<br>"
+        
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
     
     # 5.3 Geografía (Región 1)
@@ -666,7 +687,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     if no_enc: status_v7 = "Error"; content_v7 += f"<span class='status-error-inline'>[ERROR]</span> No encontradas: {', '.join(no_enc)}<br>"
     if nulos_det:
         if status_v7 == "Correcto": status_v7 = "Incorrecto"
-        content_v7 += f"<span class'status-incorrecto-inline'>[Incorrecto]</span> Nulos:<br><ul>"
+        content_v7 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Nulos:<br><ul>"
         for item in nulos_det:
             content_v7 += f"<li><b>{item['col']}</b>: {item['cant']}";
             if item['ids']: ids_str = ", ".join(map(str, item['ids'])); content_v7 += f"<br>- IDs: <b>{ids_str}</b>"
