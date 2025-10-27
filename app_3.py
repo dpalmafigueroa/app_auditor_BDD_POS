@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.23 para Streamlit (Manejo automático de columnas duplicadas en Excel)
+# Versión Atlantia 2.24 para Streamlit (Corrección KeyError en reporte detallado)
 
 import streamlit as st
 import pandas as pd
@@ -20,7 +20,7 @@ def to_excel(df):
     processed_data = output.getvalue()
     return processed_data
 
-# --- NUEVA FUNCIÓN PARA MANEJAR COLUMNAS DUPLICADAS ---
+# --- FUNCIÓN PARA MANEJAR COLUMNAS DUPLICADAS ---
 def deduplicate_columns(df):
     """
     Renombra columnas duplicadas añadiendo un sufijo numérico (.1, .2, etc.).
@@ -29,13 +29,20 @@ def deduplicate_columns(df):
     counts = Counter(cols)
     new_cols = []
     col_counts_so_far = Counter()
+    renamed_info = [] # Para almacenar info de renombrado
 
     for col in cols:
         count = counts[col]
+        original_col_name = col # Guardar nombre original por si acaso
+        col = str(col) # Asegurarse que es string para evitar errores
+
         if count > 1:
             suffix_num = col_counts_so_far[col]
             if suffix_num > 0: # Solo añadir sufijo a partir de la segunda ocurrencia
-                new_cols.append(f"{col}.{suffix_num}")
+                new_name = f"{col}.{suffix_num}"
+                new_cols.append(new_name)
+                if original_col_name not in [r[0] for r in renamed_info]: # Registrar solo una vez por nombre original
+                    renamed_info.append((original_col_name, new_name))
             else:
                 new_cols.append(col) # La primera se queda igual
             col_counts_so_far[col] += 1
@@ -44,18 +51,18 @@ def deduplicate_columns(df):
 
     df.columns = new_cols
     # Advertir si se renombraron columnas
-    renamed = [old for old, new in zip(cols, new_cols) if old != new]
-    if renamed:
-        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {list(set(renamed))}. Se usará la primera ocurrencia para el mapeo.")
+    if renamed_info:
+        renamed_originals = list(set([r[0] for r in renamed_info]))
+        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo: {renamed_originals}. Se usará la primera ocurrencia ('{renamed_originals[0]}') para el mapeo.")
     return df
-# --- FIN NUEVA FUNCIÓN ---
+# --- FIN FUNCIÓN DUPLICADOS ---
 
 
 # --- CSS PERSONALIZADO ---
 # (Mismo CSS que versiones anteriores)
 atlantia_css = """
 <style>
-    /* ... (pega aquí TODO el CSS de la versión anterior) ... */
+    /* ... (pega aquí TODO el CSS) ... */
      /* Importar fuentes Atlantia */
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600&display=swap');
@@ -543,7 +550,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
          st.stop()
 
     # --- VALIDACIONES (V1-V13) ---
-    # (El resto de las validaciones V1-V13 permanecen igual que en v2.21)
+
     # V1: Tamaño
     key_v1 = "Tamaño de las Bases"; content_v1 = ""; status_v1 = "Correcto"
     # USA df_numerico_full y df_textual_full para obtener dimensiones originales
@@ -1193,16 +1200,26 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
     # --- ÁREA DE REPORTE ESTILIZADO ---
     sort_order = {'Correcto': 1, 'Incorrecto': 2, 'Error': 3, 'Info': 4}
-    sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
+    # Asegurarse que cada 'v' tenga 'key' antes de ordenar
+    valid_results_for_sort = [v for v in validation_results if 'key' in v]
+    if len(valid_results_for_sort) != len(validation_results):
+        st.error("Error interno: No todos los resultados de validación tenían una 'key'. Revisar código de validaciones.")
+        # Opcional: mostrar los resultados que sí son válidos
+        sorted_results_temp = sorted(valid_results_for_sort, key=lambda v: sort_order.get(v['status'], 5))
+    else:
+        sorted_results_temp = sorted(validation_results, key=lambda v: sort_order.get(v['status'], 5))
+
     final_numbered_results = []
     for i, v in enumerate(sorted_results_temp):
         # Usar el número original de la validación si es posible (basado en key_vX)
         validation_num_str = ''.join(filter(str.isdigit, v['key'].split(':')[0])) if ':' in v['key'] else str(i + 1)
-        new_title = f"Validación {validation_num_str}: {v['key']}"
-        final_numbered_results.append({'title': new_title, 'status': v['status'], 'content': v['content']})
+        # Asegurar que v['key'] existe antes de usarla
+        current_key = v.get('key', f'Resultado_{i+1}') # Usar un default si falta key
+        new_title = f"Validación {validation_num_str}: {current_key}"
+        final_numbered_results.append({'title': new_title, 'status': v.get('status', 'Error'), 'content': v.get('content', 'Contenido no disponible')})
 
-    correct_count = sum(1 for v in validation_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in validation_results if v['status'] == 'Incorrecto')
-    info_count = sum(1 for v in validation_results if v['status'] == 'Info'); error_count = sum(1 for v in validation_results if v['status'] == 'Error')
+    correct_count = sum(1 for v in final_numbered_results if v['status'] == 'Correcto'); incorrect_count = sum(1 for v in final_numbered_results if v['status'] == 'Incorrecto')
+    info_count = sum(1 for v in final_numbered_results if v['status'] == 'Info'); error_count = sum(1 for v in final_numbered_results if v['status'] == 'Error')
     total_validations_criticas = correct_count + incorrect_count + error_count # Excluir Info del %
     correct_pct = (correct_count / total_validations_criticas * 100) if total_validations_criticas > 0 else 0;
     incorrect_pct = (incorrect_count / total_validations_criticas * 100) if total_validations_criticas > 0 else 0
@@ -1225,16 +1242,19 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.subheader("--- REPORTE DETALLADO ---", divider='violet')
     for v in final_numbered_results:
         status_class = f"status-{v['status'].lower()}"
-        # Asegurar que los subtítulos 5.x tengan la clase correcta
         content_detalle = v['content']
-        if v['key'].startswith("Agrupaciones"):
+        # --- CORRECCIÓN v2.24: Usar v['title'] para la comprobación ---
+        if 'title' in v and "Agrupaciones" in v['title']:
              content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
+        # --- FIN CORRECCIÓN v2.24 ---
         # Reemplazar <br> y \n para seguridad HTML
         safe_content = content_detalle.replace('<br>', '<br/>').replace('\n', '')
         # Eliminar posible doble <br/> si ya existe
         safe_content = safe_content.replace('<br/><br/>', '<br/>')
 
-        html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
+        # Asegurarse que 'title' existe antes de usarlo
+        current_title = v.get('title', 'Validación Desconocida')
+        html_content = f"""<div class='validation-box {status_class}'><h3>{current_title}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
 # Mensaje final si no se cargaron archivos
