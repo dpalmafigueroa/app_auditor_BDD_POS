@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.18 para Streamlit (Corrección Definitiva Geo Guatemala - 5 Regiones)
+# Versión Atlantia 2.19 para Streamlit (Corrección Final Geo Guatemala - Escuintla a Sur Occidente)
 
 import streamlit as st
 import pandas as pd
@@ -277,15 +277,15 @@ CLASIFICACIONES_POR_PAIS = {
     'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
-    # --- INICIO CORRECCIÓN GUATEMALA v2.18 (Definitiva - 5 Regiones) ---
+    # --- INICIO CORRECCIÓN GUATEMALA v2.19 (Escuintla a Sur Occidente) ---
     'Guatemala': {
         'Metro': ['Guatemala'],
         'Nor Oriente': ['Petén', 'Alta Verapaz', 'Zacapa', 'El Progreso', 'Izabal', 'Baja Verapaz'],
         'Nor Occidente': ['San Marcos', 'Quetzaltengango', 'Chimaltenango', 'Quiché', 'Totonicapán', 'Huehuetenango', 'Sololá', 'Sacatepequez'],
-        'Sur Occidente': ['Suchitepéquez', 'Retalhuleu'],
-        'Sur Oriente': ['Chiquimula', 'Jutiapa', 'Jalapa', 'Santa Rosa', 'Escuintla']
+        'Sur Occidente': ['Suchitepéquez', 'Retalhuleu', 'Escuintla'], # <-- Escuintla AÑADIDO aquí
+        'Sur Oriente': ['Chiquimula', 'Jutiapa', 'Jalapa', 'Santa Rosa'] # <-- Escuintla QUITADO de aquí
     },
-    # --- FIN CORRECCIÓN GUATEMALA v2.18 ---
+    # --- FIN CORRECCIÓN GUATEMALA v2.19 ---
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
@@ -385,8 +385,8 @@ with col_dl2:
             df_geo = pd.DataFrame(lista_g)
             excel_geo = to_excel(df_geo)
             st.download_button(label="Descargar Reglas Geografía (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
-        else: st.info(f"No hay reglas geográficas detalladas para {pais_seleccionado_display}.")
-    else: st.info(f"No hay reglas geográficas definidas para {pais_seleccionado_display}.")
+        else: st.info(f"No hay regras geográficas detalladas para {pais_seleccionado_display}.")
+    else: st.info(f"No hay regras geográficas definidas para {pais_seleccionado_display}.")
 
 st.divider()
 
@@ -620,7 +620,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     content_v5 += f"<h3>5.3: Geografía ({pais_seleccionado_display} - Region 1)</h3>"; status_v5_3 = "Correcto"
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
-        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info-inline'>[INFO]</span> No hay reglas geográficas para {pais_seleccionado_display}."
+        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info-inline'>[INFO]</span> No hay regras geográficas para {pais_seleccionado_display}."
         else:
             col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD'
             if not all(c in df_textual.columns for c in [col_reg, col_ciu]): raise KeyError(f"Columnas Región/Ciudad no encontradas.")
