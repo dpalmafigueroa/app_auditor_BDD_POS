@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.26 para Streamlit (Doble Deduplicación + Mapeo Edad Honduras)
+# Versión Atlantia 2.27 para Streamlit (Fix Geo Perú, Botón Geo R2, Botón Mapeo)
 
 import streamlit as st
 import pandas as pd
@@ -19,6 +19,36 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Reglas')
     processed_data = output.getvalue()
     return processed_data
+
+# --- NUEVA FUNCIÓN PARA DATAFRAME DE MAPEO (v2.27) ---
+def create_mapping_dataframe(mapping_dict, paises_list):
+    """
+    Convierte el diccionario anidado COLUMN_MAPPING en un DataFrame plano
+    para su descarga.
+    """
+    records = []
+    # Iterar sobre las bases (Numérica, Textual)
+    for base_name, mappings in mapping_dict.items():
+        # Iterar sobre las columnas estándar (Unico, [age], etc.)
+        for standard_col, country_map in mappings.items():
+            record = {
+                'Base': base_name,
+                'Columna Estándar (Usada en código)': standard_col
+            }
+            # Iterar sobre la lista de países para mantener el orden
+            for pais in paises_list:
+                # Obtener el nombre específico del país; usar '-' si no existe
+                record[pais] = country_map.get(pais, '-')
+            records.append(record)
+    
+    # Crear DataFrame
+    df = pd.DataFrame(records)
+    
+    # Ordenar columnas
+    column_order = ['Base', 'Columna Estándar (Usada en código)'] + paises_list
+    df = df[column_order]
+    
+    return df
 
 # --- FUNCIÓN PARA MANEJAR COLUMNAS DUPLICADAS ---
 def deduplicate_columns(df, operation_name="lectura"):
@@ -57,7 +87,7 @@ def deduplicate_columns(df, operation_name="lectura"):
     # Advertir si se renombraron columnas
     if renamed_info:
         renamed_originals = list(set([str(r[0]) for r in renamed_info])) # Convertir a string para join
-        st.warning(f"Se detectaron y renombraron columnas duplicadas durante la {operation_name}: {', '.join(renamed_originals)}. Se usará la primera ocurrencia para el mapeo.")
+        st.warning(f"Se detectaron y renombraron columnas duplicadas en el archivo durante la {operation_name}: {', '.join(renamed_originals)}. Se usará la primera ocurrencia para el mapeo.")
     return df
 # --- FIN FUNCIÓN DUPLICADOS ---
 
@@ -317,7 +347,17 @@ CLASIFICACIONES_POR_PAIS = {
     'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosi', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
     'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
-    'Perú': {'REGIÓN CENTRO': ['Ayacucho', 'Huancavelica', 'Junín'],'REGIÓN LIMA': ['Ica', 'Lima', 'Callao'],'REGIÓN NORTE': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],'REGIÓN ORIENTE': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],'REGIÓN SUR': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']},
+    
+    # --- INICIO CORRECCIÓN PERÚ GEO v2.27 ---
+    'Perú': {
+        'Centro': ['Ayacucho', 'Huancavelica', 'Junín'],
+        'Lima y Callao': ['Ica', 'Lima', 'Callao'],
+        'Norte': ['Áncash', 'Cajamarca', 'La Libertad', 'Lambayeque', 'Piura', 'Tumbes'],
+        'Oriente': ['Amazonas', 'Huánuco', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],
+        'Sur': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']
+    },
+    # --- FIN CORRECCIÓN PERÚ GEO v2.27 ---
+    
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
     'Guatemala': { # Estructura v2.19 (5 Regiones, Escuintla en Sur Occidente)
@@ -437,7 +477,8 @@ with col_pais:
 
 # --- Botones de Descarga ---
 st.markdown("### Descargar Reglas de Validación")
-col_dl1, col_dl2, col_dl_spacer = st.columns([2, 2, 3])
+# --- MODIFICACIÓN v2.27: Añadida col_dl3 ---
+col_dl1, col_dl2, col_dl3 = st.columns(3)
 with col_dl1:
     reglas_vol = THRESHOLDS_POR_PAIS.get(pais_seleccionado_display, [])
     if reglas_vol:
@@ -448,13 +489,54 @@ with col_dl1:
 with col_dl2:
     reglas_geo = CLASIFICACIONES_POR_PAIS.get(pais_seleccionado_display, {})
     if reglas_geo:
-        lista_g = [{'Región': r, 'Ciudad/Dpto': c} for r, ciudades in reglas_geo.items() for c in ciudades]
+        lista_g = [{'Región 1': r, 'Ciudad/Dpto': c} for r, ciudades in reglas_geo.items() for c in ciudades]
         if lista_g:
             df_geo = pd.DataFrame(lista_g)
             excel_geo = to_excel(df_geo)
-            st.download_button(label="Descargar Reglas Geografía (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
+            st.download_button(label="Descargar Reglas Geografía 1 (.xlsx)", data=excel_geo, file_name=f'reglas_geografia_r1_{pais_seleccionado_display}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', key='dl_geo')
         else: st.info(f"No hay regras geográficas detalladas para {pais_seleccionado_display}.")
     else: st.info(f"No hay regras geográficas definidas para {pais_seleccionado_display}.")
+
+# --- NUEVO BOTÓN GEO 2 PERÚ (v2.27) ---
+with col_dl3:
+    if pais_seleccionado_display == 'Perú':
+        reglas_geo_r2 = CLASIFICACIONES_PERU_REGION2
+        if reglas_geo_r2:
+            lista_g_r2 = [{'Región 2': r, 'Ciudad/Dpto': c} for r, ciudades in reglas_geo_r2.items() for c in ciudades]
+            df_geo_r2 = pd.DataFrame(lista_g_r2)
+            excel_geo_r2 = to_excel(df_geo_r2)
+            st.download_button(
+                label="Descargar Reglas Geo 2 (Perú)",
+                data=excel_geo_r2,
+                file_name=f'reglas_geografia_r2_Peru.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                key='dl_geo_r2'
+            )
+        else:
+            st.info("No hay reglas de Geografía 2 para Perú.")
+    else:
+        # Espacio reservado para mantener alineación
+        st.empty() 
+# --- FIN NUEVO BOTÓN ---
+
+st.divider()
+
+# --- NUEVO BOTÓN MAPEO DE COLUMNAS (v2.27) ---
+st.markdown("### Descargar Mapeo de Columnas")
+try:
+    df_mapeo = create_mapping_dataframe(COLUMN_MAPPING, paises_disponibles)
+    excel_mapeo = to_excel(df_mapeo)
+    st.download_button(
+        label="Descargar Mapeo Completo (.xlsx)",
+        data=excel_mapeo,
+        file_name='mapeo_columnas_completo.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        key='dl_mapeo'
+    )
+except Exception as e_map:
+    st.error(f"No se pudo generar el archivo de mapeo: {e_map}")
+# --- FIN NUEVO BOTÓN ---
+
 
 st.divider()
 
@@ -534,6 +616,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     # --- INICIO CHEQUEO POST-RENOMBRADO (v2.19) ---
     required_cols_num = ['Unico', 'NSE', 'gender', 'AGErange', 'Region'] # Columnas numéricas esenciales con nombre estándar
     required_cols_txt = ['[auth]', 'NSE', 'NSE2', '[age]', 'Region 1 (Centro/Metro/Oeste)', 'CIUDAD'] # Columnas textuales esenciales con nombre estándar
+    
+    # Añadir "Por favor, selecciona..." a la lista de requeridos de texto
+    required_cols_txt.append("Por favor, selecciona el rango de edad en el que te encuentras:")
+    
     # Añadir Ponderador si no es Colombia Minors
     if pais_clave_interna != 'Colombia Minors':
         required_cols_num.append('Ponderador')
@@ -642,7 +728,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             vals_str = ", ".join(map(str, vals)); content_v3 += f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Múltiples valores encontrados: {vals_str}<br>"
     # Si al final no hubo errores ni incorrectos, pero sí info, el estado final es Info
     if status_v3 == "Correcto" and "[INFO]" in content_v3: status_v3 = "Info"
-    elif status_v3 == "Correcto" and not "[INFO]" in content_v3: content_v3 = "<span class='status-correcto-inline'>[Correcto]</span> Ambas columnas ('lastpage', 'lastpage_Parte2' si aplica) tienen un único valor."
+    elif status_v3 == "Correcto" and not "[INFO]" in content_v3: content_v3 = "<span class'status-correcto-inline'>[Correcto]</span> Ambas columnas ('lastpage', 'lastpage_Parte2' si aplica) tienen un único valor."
 
     validation_results.append({'key': key_v3, 'status': status_v3, 'content': content_v3})
 
@@ -706,6 +792,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         # Ya se verificó que las columnas existen después del renombrado y antes de crear df_textual
         # Ahora usamos directamente los nombres estándar en df_textual
         # df_textual[col_g_edad_std] y df_textual[col_d_edad_std] deberían ser Series únicas
+        # gracias a la doble deduplicación
         df_temp_edad = df_textual[[col_g_edad_std, col_d_edad_std]].copy()
         df_temp_edad[col_d_edad_std] = pd.to_numeric(df_temp_edad[col_d_edad_std], errors='coerce')
 
@@ -726,9 +813,9 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     except KeyError as e: # Aunque ya chequeamos, por si acaso
         status_v5 = "Error"
         content_v5 += f"<span class='status-error-inline'>[ERROR]</span> Columna de edad faltante: {e}<br>"
-    except Exception as e_agg:
+    except Exception as e_agg: # Captura el error "arg must be a list..." si la deduplicación falló
         status_v5 = "Error"
-        content_v5 += f"<span class='status-error-inline'>[ERROR Agregación Edad]</span> {e_agg}<br>"
+        content_v5 += f"<span class='status-error-inline'>[ERROR Agregación Edad]</span> {e_agg}. Esto usualmente significa que una columna ('Rango Edad' o 'Edad Exacta') sigue duplicada.<br>"
 
     content_v5 += "<hr style='border-top: 1px dotted #ccc;'>"
 
@@ -749,7 +836,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         content_v5 += "Verifica consistencia (incluye valores vacíos/nulos):<br>" + rep_nse.to_html(classes='df-style', na_rep='-') # na_rep es por si acaso
     except KeyError as e_nse_key: # Captura específica si A PESAR de todo falta una columna
         if status_v5 != "Error": status_v5 = "Error"
-        content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e_nse_key} no encontrada al intentar crear tabla cruzada NSE.<br>"
+        content_v5 += f"<span class'status-error-inline'>[ERROR]</span> {e_nse_key} no encontrada al intentar crear tabla cruzada NSE.<br>"
     except Exception as e_crosstab: # Captura otros posibles errores de crosstab
         if status_v5 != "Error": status_v5 = "Error"
         content_v5 += f"<span class='status-error-inline'>[ERROR Crosstab NSE]</span> {e_crosstab}<br>"
@@ -761,7 +848,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     col_reg = 'Region 1 (Centro/Metro/Oeste)'; col_ciu = 'CIUDAD' # Nombres estándar
     try:
         clasif = CLASIFICACIONES_POR_PAIS.get(pais_clave_interna);
-        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class='status-info-inline'>[INFO]</span> No hay regras geográficas definidas para {pais_seleccionado_display}."
+        if not clasif: status_v5_3 = "Info"; content_v5 += f"<span class'status-info-inline'>[INFO]</span> No hay regras geográficas definidas para {pais_seleccionado_display}."
         elif not all(c in df_textual.columns for c in [col_reg, col_ciu]):
              # Este caso ahora debería ser manejado por el chequeo post-renombrado, pero lo dejamos como fallback
              raise KeyError(f"Columnas '{col_reg}' o '{col_ciu}' no encontradas después del renombrado.")
@@ -843,7 +930,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         except KeyError as e:
             status_v5_4 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR]</span> {e}<br>"
         except Exception as e_geo2:
-             status_v5_4 = "Error"; content_v5 += f"<span class='status-error-inline'>[ERROR Inesperado Geo 2]</span> {e_geo2}<br>"
+             status_v5_4 = "Error"; content_v5 += f"<span class'status-error-inline'>[ERROR Inesperado Geo 2]</span> {e_geo2}<br>"
 
         # Actualizar estado general de V5
         if status_v5 == "Correcto" and status_v5_4 not in ["Correcto", "Info"]: status_v5 = status_v5_4
@@ -953,10 +1040,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                     df_disp.columns = [id_auth, 'Respuesta'] # Renombrar para display
                     content_v8 += df_disp.to_html(classes='df-style', index=False)
             else:
-                 content_v8 = f"<span class='status-info-inline'>[INFO]</span> Se encontraron {total_p} columnas 'menciona' en el original, pero ninguna existe o está mapeada correctamente en el archivo procesado."
+                 content_v8 = f"<span class'status-info-inline'>[INFO]</span> Se encontraron {total_p} columnas 'menciona' en el original, pero ninguna existe o está mapeada correctamente en el archivo procesado."
 
-    except KeyError as e_v8: status_v8 = "Error"; content_v8 = f"<span class='status-error-inline'>[ERROR]</span> {e_v8}<br>"
-    except Exception as e_v8_gen: status_v8 = "Error"; content_v8 = f"<span class='status-error-inline'>[ERROR Inesperado V8]</span> {e_v8_gen}<br>"
+    except KeyError as e_v8: status_v8 = "Error"; content_v8 = f"<span class'status-error-inline'>[ERROR]</span> {e_v8}<br>"
+    except Exception as e_v8_gen: status_v8 = "Error"; content_v8 = f"<span class'status-error-inline'>[ERROR Inesperado V8]</span> {e_v8_gen}<br>"
     validation_results.append({'key': key_v8, 'status': status_v8, 'content': content_v8})
 
 
@@ -1002,8 +1089,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                  status_v9 = "Error" # Si la suma falló completamente
                  content_v9 += "<span class='status-error-inline'>[ERROR]</span> No se pudo calcular la suma del ponderador."
 
-        except KeyError as e: status_v9 = "Error"; content_v9 = f"<span class='status-error-inline'>[ERROR]</span> {e}"
-        except Exception as e_v9: status_v9 = "Error"; content_v9 = f"<span class='status-error-inline'>[ERROR Inesperado V9]</span> al sumar '{col_pond}': {e_v9}"
+        except KeyError as e: status_v9 = "Error"; content_v9 = f"<span class'status-error-inline'>[ERROR]</span> {e}"
+        except Exception as e_v9: status_v9 = "Error"; content_v9 = f"<span class'status-error-inline'>[ERROR Inesperado V9]</span> al sumar '{col_pond}': {e_v9}"
     validation_results.append({'key': key_v9, 'status': status_v9, 'content': content_v9})
 
 
@@ -1071,10 +1158,10 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     errores_umbrales = []
     reglas_pais = THRESHOLDS_POR_PAIS.get(pais_clave_interna, [])
     if not reglas_pais:
-        status_v11 = "Info"; content_v11 = f"<span class='status-info-inline'>[INFO]</span> No hay regras de volumetría definidas para {pais_seleccionado_display}."
+        status_v11 = "Info"; content_v11 = f"<span class'status-info-inline'>[INFO]</span> No hay regras de volumetría definidas para {pais_seleccionado_display}."
     else:
         id_col_ok_v11 = id_unico in df_numerico_renamed.columns
-        if not id_col_ok_v11: content_v11 += f"<span class='status-error-inline'>[WARN]</span> Columna ID '{id_unico}' no encontrada para reportar violaciones.<br>"
+        if not id_col_ok_v11: content_v11 += f"<span class'status-error-inline'>[WARN]</span> Columna ID '{id_unico}' no encontrada para reportar violaciones.<br>"
 
         for regla in reglas_pais:
             col = regla['col']; cond = regla['cond']; lim = regla['lim']
@@ -1134,7 +1221,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         else:
             prefix = ""
             if status_v11 == "Incorrecto": prefix = f"<span class='status-incorrecto-inline'>[Incorrecto]</span> Se encontraron valores fuera de umbral (se muestran max 5 por regla):<br>"
-            if status_v11 == "Error": prefix = f"<span class='status-error-inline'>[ERROR]</span> Errores encontrados durante la validación de umbrales:<br>{content_v11}" # Incluir errores de conversión si hubo
+            if status_v11 == "Error": prefix = f"<span class'status-error-inline'>[ERROR]</span> Errores encontrados durante la validación de umbrales:<br>{content_v11}" # Incluir errores de conversión si hubo
             if errores_umbrales:
                 df_errores = pd.DataFrame(errores_umbrales)[['Columna', 'Error', 'ID', 'Valor']]
                 content_v11 = prefix + df_errores.to_html(classes='df-style', index=False)
@@ -1206,7 +1293,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                     df_dups_v13 = df_check[dups_mask_v13]
                     ids_unicos_duplicados = df_dups_v13[col_panel].nunique()
 
-                    content_v13 += f"<span class'status-info-inline'>[REPORTE]</span> Se encontraron <b>{total_filas_duplicadas}</b> filas (de {total_filas_validas} no nulas) con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
+                    content_v13 += f"<span class='status-info-inline'>[REPORTE]</span> Se encontraron <b>{total_filas_duplicadas}</b> filas (de {total_filas_validas} no nulas) con <b>{ids_unicos_duplicados}</b> '{col_panel}' duplicados.<br>"
                     porcentaje_dup = (total_filas_duplicadas / total_filas_validas) * 100 if total_filas_validas > 0 else 0
                     content_v13 += f"- Porcentaje Duplicado (sobre no nulos): <b>{porcentaje_dup:.2f}%</b><br><br>"
                     content_v13 += f"Reporte de '{col_panel}' duplicados y su frecuencia:<br>"
@@ -1287,7 +1374,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         content_detalle = v['content']
         # --- CORRECCIÓN v2.24: Usar v['title'] para la comprobación ---
         if 'title' in v and "Agrupaciones" in v['title']:
-             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class'sub-heading'>5.4:")
+             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
         # --- FIN CORRECCIÓN v2.24 ---
         # Reemplazar <br> y \n para seguridad HTML
         safe_content = str(content_detalle).replace('<br>', '<br/>').replace('\n', '') # Asegurar que sea string
@@ -1296,7 +1383,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
         # Asegurarse que 'title' existe antes de usarlo
         current_title = v.get('title', 'Validación Desconocida')
-        html_content = f"""<div class='validation-box {status_class}'><h3>{current_title}</h3>{safe_content}</div>"""
+        html_content = f"""<div class'validation-box {status_class}'><h3>{current_title}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
 # Mensaje final si no se cargaron archivos
