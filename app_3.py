@@ -915,4 +915,4 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         html_content = f"""<div class='validation-box {status_class}'><h3>{v['title']}</h3>{safe_content}</div>"""
         st.markdown(html_content, unsafe_allow_html=True)
 
-    st.success
+    # La línea 'st.success' que estaba aquí fue eliminada.
