@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.29 para Streamlit (Fix Geo Perú R2 Completo)
+# Versión Atlantia 2.29 (Mod Colombia Minors Geo)
 
 import streamlit as st
 import pandas as pd
@@ -367,7 +367,11 @@ CLASIFICACIONES_POR_PAIS = {
         'Sur Oriente': ['Chiquimula', 'Jutiapa', 'Jalapa', 'Santa Rosa']
     },
     'El Salvador': {'AMSS': ['San Salvador'],'Centro': ['Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'San Vicente'],'Occidente': ['Ahuachapán', 'Santa Ana', 'Sonsonate'],'Oriente': ['La Union', 'Morazán', 'San Miguel', 'Usulután']},
-    'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
+    'Costa Rica': {}, 'Puerto Rico': {},
+    # --- INICIO MODIFICACIÓN SOLICITADA ---
+    # Se iguala Colombia Minors a Colombia
+    'Colombia Minors': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']}
+    # --- FIN MODIFICACIÓN SOLICITADA ---
 }
 
 # --- INICIO CORRECCIÓN PERÚ GEO R2 v2.29 (Actualización completa R2) ---
@@ -1016,8 +1020,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             # Seleccionar estas columnas y el ID del DF RENOMBRADO
             # Mapear los nombres deduplicados a los nombres estándar si existen en el renombrado
             cols_m_renamed = [rename_map_txt.get(c.split('.')[0], c) # Intentar mapear el nombre base
-                               for c in cols_m_original_dedup
-                               if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns]
+                             for c in cols_m_original_dedup
+                             if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns]
             # Eliminar duplicados si el mapeo causa que varias 'Menciona.X' apunten a la misma
             cols_m_renamed = list(dict.fromkeys(cols_m_renamed))
 
