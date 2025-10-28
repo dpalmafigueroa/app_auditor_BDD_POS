@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.28 para Streamlit (Fix Geo Perú R1 y R2)
+# Versión Atlantia 2.29 para Streamlit (Fix Geo Perú R2 Completo)
 
 import streamlit as st
 import pandas as pd
@@ -346,9 +346,9 @@ CLASIFICACIONES_POR_PAIS = {
     'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosi', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
-    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
+    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungahua']},
     
-    # --- INICIO CORRECCIÓN PERÚ GEO v2.28 (Ica y Huánuco a Centro) ---
+    # (v2.28 - Ica y Huánuco a Centro)
     'Perú': {
         'Centro': ['Ayacucho', 'Huancavelica', 'Junín', 'Ica', 'Huánuco'],
         'Lima y Callao': ['Lima', 'Callao'],
@@ -356,7 +356,6 @@ CLASIFICACIONES_POR_PAIS = {
         'Oriente': ['Amazonas', 'Loreto', 'Pasco', 'San Martin', 'Ucayali'],
         'Sur': ['Apurimac', 'Arequipa', 'Cuzco', 'Madre de Dios', 'Moquegua', 'Puno', 'Tacna']
     },
-    # --- FIN CORRECCIÓN PERÚ GEO v2.28 ---
     
     'R. Dominicana': {'Capital': ['Distrito Nacional', 'Santo Domingo'],'Region Este': ['El Seibo', 'Hato Mayor', 'La Altagracia', 'La Romana', 'Monte Plata', 'San Pedro de Macorís'],'Region norte/ Cibao': ['Dajabón', 'Duarte (San Francisco)', 'Espaillat', 'Hermanas Mirabal', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Montecristi', 'Puerto Plata', 'Samaná', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Valverde'],'Region Sur': ['Azua', 'Bahoruco', 'Barahona', 'Elías Piña', 'Independencia', 'Pedernales', 'Peravia', 'San Cristóbal', 'San José de Ocoa', 'San Juan']},
     'Honduras': {'Norte Ciudad': ['Cortés'],'Norte interior': ['Atlántida', 'Colón', 'Copán', 'Ocotepeque', 'Santa Bárbara', 'Yoro'],'Sur Ciudad': ['Francisco Morazán'],'Sur interior': ['Choluteca', 'Comayagua', 'El Paraíso', 'Intibucá', 'La Paz', 'Olancho', 'Valle']},
@@ -371,15 +370,15 @@ CLASIFICACIONES_POR_PAIS = {
     'Costa Rica': {}, 'Puerto Rico': {}, 'Colombia Minors': {}
 }
 
-# --- INICIO CORRECCIÓN PERÚ GEO R2 v2.28 (Quitar 'REGIÓN ') ---
+# --- INICIO CORRECCIÓN PERÚ GEO R2 v2.29 (Actualización completa R2) ---
 CLASIFICACIONES_PERU_REGION2 = {
-    'LIMA': ['Lima', 'Callao'],
-    'NORTE': ['La Libertad', 'Lambayeque', 'Piura'],
-    'CENTRO': ['Junín'],
-    'SUR': ['Arequipa', 'Cuzco'],
-    'ORIENTE': ['Loreto']
+    'LIMA': ['Lima', 'Callao', 'Ica'],
+    'NORTE': ['La Libertad', 'Lambayeque', 'Piura', 'Cajamarca', 'Áncash', 'Tumbes'],
+    'CENTRO': ['Junín', 'Ayacucho', 'Huancavelica'],
+    'SUR': ['Arequipa', 'Cuzco', 'Puno', 'Tacna', 'Moquegua', 'Apurimac', 'Madre de Dios'],
+    'ORIENTE': ['Loreto', 'Huánuco', 'San Martin', 'Pasco', 'Ucayali', 'Amazonas']
 }
-# --- FIN CORRECCIÓN PERÚ GEO R2 v2.28 ---
+# --- FIN CORRECCIÓN PERÚ GEO R2 v2.29 ---
 
 THRESHOLDS_POR_PAIS = {
     # (Igual que V1.8)
@@ -1316,7 +1315,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         content_v13 = f"<span class='status-error-inline'>[ERROR]</span> {e_v13}"
     except Exception as e_v13_gen:
          status_v13 = "Error"
-         content_v13 = f"<span class='status-error-inline'>[ERROR inesperado V13]</span> {e_v13_gen}"
+         content_v13 = f"<span class='status-error-inline'>[ERROR inesperado V13]</span> {e_v1ag_gen}"
 
     validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
 
@@ -1374,7 +1373,7 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         content_detalle = v['content']
         # --- CORRECCIÓN v2.24: Usar v['title'] para la comprobación ---
         if 'title' in v and "Agrupaciones" in v['title']:
-             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class='sub-heading'>5.4:")
+             content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class'sub-heading'>5.4:")
         # --- FIN CORRECCIÓN v2.24 ---
         # Reemplazar <br> y \n para seguridad HTML
         safe_content = str(content_detalle).replace('<br>', '<br/>').replace('\n', '') # Asegurar que sea string
