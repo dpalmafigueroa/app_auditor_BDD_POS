@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.29 (Mod Colombia Minors Geo)
+# Versión Atlantia 2.29 (Mod Colombia Minors Geo / Mod GT NSE2)
 
 import streamlit as st
 import pandas as pd
@@ -459,7 +459,11 @@ COLUMN_MAPPING = {
         },
         # --- FIN CORRECCIÓN HONDURAS EDAD v2.26 ---
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
-        'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Colombia Minors': 'SEL SEPARADO'},
+        
+        # --- INICIO MODIFICACIÓN SOLICITADA (Guatemala NSE2) ---
+        'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'NSE', 'Colombia Minors': 'SEL SEPARADO'},
+        # --- FIN MODIFICACIÓN SOLICITADA ---
+        
         'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia (v2.21)
          'El Salvador': 'REGION', 'Guatemala': 'region', 'Colombia Minors': 'region'},
         'CIUDAD': {'Panamá': 'CIUDAD', 'México': 'Estado donde vive:', 'Colombia': 'Por favor escribe el nombre de la ciudad en la que vives:', 'Ecuador': 'Estado', 'Perú': 'state', 'R. Dominicana': 'state', 'Honduras': 'Estado', # <-- Columna de Departamento/Ciudad (v2.21)
@@ -1020,8 +1024,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
             # Seleccionar estas columnas y el ID del DF RENOMBRADO
             # Mapear los nombres deduplicados a los nombres estándar si existen en el renombrado
             cols_m_renamed = [rename_map_txt.get(c.split('.')[0], c) # Intentar mapear el nombre base
-                             for c in cols_m_original_dedup
-                             if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns]
+                              for c in cols_m_original_dedup
+                              if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns]
             # Eliminar duplicados si el mapeo causa que varias 'Menciona.X' apunten a la misma
             cols_m_renamed = list(dict.fromkeys(cols_m_renamed))
 
