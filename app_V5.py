@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.29 (Mod Colombia Minors Geo / Mod GT NSE2)
+# Versión Atlantia 2.29 (Mod Colombia Minors Geo / Mod GT NSE2_Parte2)
 
 import streamlit as st
 import pandas as pd
@@ -461,7 +461,7 @@ COLUMN_MAPPING = {
         'NSE': {'Panamá': 'NSE', 'México': 'SEL AGRUPADO', 'Colombia': 'NSE', 'Ecuador': 'agrupado ows', 'Perú': 'SEL AGRUPADO', 'R. Dominicana': 'NSE', 'Honduras': 'NSE', 'El Salvador': 'NSE', 'Guatemala': 'NSE Agrupado', 'Colombia Minors': 'SEL AGRUPADO'},
         
         # --- INICIO MODIFICACIÓN SOLICITADA (Guatemala NSE2) ---
-        'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'NSE', 'Colombia Minors': 'SEL SEPARADO'},
+        'NSE2': {'Panamá': 'NSE2', 'México': 'SEL SEPARADO', 'Colombia': 'NSE2', 'Ecuador': 'Clasificación NSE (HIDDEN VARIABLE)PUNTOS: 0', 'Perú': 'SEL SEPARADO', 'R. Dominicana': 'NSE2', 'Honduras': 'NSE2', 'El Salvador': '¿Cuál es el ingreso mensual promedio de su hogar?', 'Guatemala': 'NSE_Parte2', 'Colombia Minors': 'SEL SEPARADO'},
         # --- FIN MODIFICACIÓN SOLICITADA ---
         
         'Region 1 (Centro/Metro/Oeste)': {'Panamá': 'Region 1 (Centro/Metro/Oeste)', 'México': 'region', 'Colombia': 'region_Parte2', 'Ecuador': 'Region', 'Perú': 'region', 'R. Dominicana': 'region', 'Honduras': 'Region', # <-- Columna de Región Amplia (v2.21)
