@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.30 (Mod Colombia Minors Geo + Other Report)
+# Versión Atlantia 2.29 (Mod Colombia Minors Geo)
 
 import streamlit as st
 import pandas as pd
@@ -338,7 +338,6 @@ st.markdown("""
 * **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
 * **Duplicados en IDs:** Verifica que `Unico` (Num) y `[auth]` (Txt) no tengan valores repetidos.
 * **Duplicados [panelistid]:** Reporta (Info) `[panelistid]` (Txt) duplicados y su conteo.
-* **Respuestas 'Other':** Lista todas las respuestas a preguntas que contienen "Other" (Nuevo).
 """)
 st.divider()
 
@@ -383,7 +382,7 @@ CLASIFICACIONES_PERU_REGION2 = {
     'SUR': ['Arequipa', 'Cuzco', 'Puno', 'Tacna', 'Moquegua', 'Apurimac', 'Madre de Dios'],
     'ORIENTE': ['Loreto', 'Huánuco', 'San Martin', 'Pasco', 'Ucayali', 'Amazonas']
 }
-# --- FIN CORRECIÓN PERÚ GEO R2 v2.29 ---
+# --- FIN CORRECCIÓN PERÚ GEO R2 v2.29 ---
 
 THRESHOLDS_POR_PAIS = {
     # (Igual que V1.8)
@@ -1324,79 +1323,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
 
     validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
 
-    # --- INICIO NUEVA VALIDACIÓN V14: RESPUESTAS 'OTHER' ---
-    key_v14 = "Respuestas 'Other'"; content_v14 = ""; status_v14 = "Info"
-    col_auth_v14 = '[auth]'; search_term_v14 = "other" # Término de búsqueda case-insensitive
-    
-    try:
-        # Chequear si la columna ID existe en el DF renombrado
-        if col_auth_v14 not in df_textual_renamed.columns:
-            raise KeyError(f"Columna ID '{col_auth_v14}' no encontrada para reporte de 'Other'.")
-
-        # 1. Buscar columnas 'other' en el DF ORIGINAL (df_textual_full)
-        cols_other_original_dedup = [
-            c for c in df_textual_full.columns 
-            if search_term_v14 in str(c).lower()
-        ]
-        total_p_v14 = len(cols_other_original_dedup)
-
-        if not cols_other_original_dedup:
-            content_v14 = f"<span class='status-info-inline'>[INFO]</span> No se encontraron columnas que contengan '{search_term_v14}' en el archivo textual original."
-        else:
-            # 2. Mapear nombres originales a nombres estándar (renombrados)
-            cols_other_renamed = [
-                rename_map_txt.get(c.split('.')[0], c) # Mapear el nombre base
-                for c in cols_other_original_dedup
-                if rename_map_txt.get(c.split('.')[0], c) in df_textual_renamed.columns # Si existe en el DF final
-            ]
-            # Eliminar duplicados si el mapeo causa que varias 'Other.X' apunten a la misma
-            cols_other_renamed = list(dict.fromkeys(cols_other_renamed))
-
-            cols_to_melt_v14 = [col_auth_v14] + cols_other_renamed
-
-            if len(cols_to_melt_v14) > 1: # Si encontramos al menos una col 'other' mapeada
-                # 3. Melt, limpiar y reportar
-                melted_v14 = df_textual_renamed[cols_to_melt_v14].melt(
-                    id_vars=[col_auth_v14], 
-                    var_name='Pregunta_Std', 
-                    value_name='Respuesta'
-                )
-                # Asegurar que la columna Respuesta exista antes de dropear NAs
-                if 'Respuesta' in melted_v14.columns:
-                    final_other = melted_v14.dropna(subset=['Respuesta'])
-                    if not final_other.empty:
-                        final_other['Respuesta'] = final_other['Respuesta'].astype(str)
-                        # Filtrar respuestas vacías o que solo sean espacios
-                        final_other = final_other[final_other['Respuesta'].str.strip() != '']
-                    
-                    if final_other.empty:
-                        content_v14 = f"<span class='status-info-inline'>[INFO]</span> Se encontraron {total_p_v14} columnas 'other' en el original, pero no hay respuestas válidas después del filtrado/renombrado."
-                    else:
-                        total_r_v14 = len(final_other)
-                        content_v14 += f"<span class='status-info-inline'>[REPORTE]</span> <b>{total_p_v14}</b> cols 'other' encontradas en original, <b>{total_r_v14}</b> respuestas no vacías.<br><br>"
-                        
-                        # Mostrar ID, Pregunta (estándar) y Respuesta
-                        df_disp_v14 = final_other[[col_auth_v14, 'Pregunta_Std', 'Respuesta']]
-                        if total_r_v14 > 500: 
-                            content_v14 += f"(Se muestran las primeras 500)<br>"
-                            df_disp_v14 = df_disp_v14.head(500)
-                        
-                        df_disp_v14.columns = [col_auth_v14, 'Pregunta (Estándar)', 'Respuesta'] # Renombrar para display
-                        content_v14 += df_disp_v14.to_html(classes='df-style', index=False)
-                else:
-                    content_v14 = f"<span class='status-info-inline'>[INFO]</span> Melt no produjo columna 'Respuesta'. {total_p_v14} columnas 'other' encontradas en original."
-            else:
-                content_v14 = f"<span class='status-info-inline'>[INFO]</span> Se encontraron {total_p_v14} columnas 'other' en el original, pero ninguna existe o está mapeada correctamente en el archivo procesado."
-
-    except KeyError as e_v14: 
-        status_v14 = "Error"
-        content_v14 = f"<span class='status-error-inline'>[ERROR]</span> {e_v14}<br>"
-    except Exception as e_v14_gen: 
-        status_v14 = "Error"
-        content_v14 = f"<span class='status-error-inline'>[ERROR Inesperado V14]</span> {e_v14_gen}<br>"
-    
-    validation_results.append({'key': key_v14, 'status': status_v14, 'content': content_v14})
-    # --- FIN NUEVA VALIDACIÓN V14 ---
 
 
     # --- FIN VALIDACIONES ---
@@ -1421,13 +1347,6 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         validation_num_str = ''.join(filter(str.isdigit, v['key'].split(':')[0])) if ':' in v['key'] else str(i + 1)
         # Asegurar que v['key'] existe antes de usarla
         current_key = v.get('key', f'Resultado_{i+1}') # Usar un default si falta key
-        
-        # --- Modificación para V14 ---
-        # Asignar manualmente un número si es una de las nuevas
-        if current_key == "Respuestas 'Other'":
-            validation_num_str = "14"
-        # --- Fin Modificación V14 ---
-
         new_title = f"Validación {validation_num_str}: {current_key}"
         final_numbered_results.append({'title': new_title, 'status': v.get('status', 'Error'), 'content': v.get('content', 'Contenido no disponible')})
 
