@@ -1,5 +1,5 @@
 # --- validador_app.py ---
-# Versión Atlantia 2.29 (Mod Colombia Minors Geo / Mod GT NSE2_Parte2)
+# Versión Atlantia 2.30 (Ajustes Geo, Reporte Abiertas V8 y V14 Conteo Demos)
 
 import streamlit as st
 import pandas as pd
@@ -332,21 +332,24 @@ st.markdown("""
 * **Agrupaciones:** Rango de edad vs `[age]`, `NSE` vs `NSE2`, Geografía (Región/Ciudad). (Perú incluye validación `region2`).
 * **Origen/Proveedor:** Conteo por proveedor.
 * **Nulos (Numérica):** Busca vacíos en `NSE`, `gender`, `AGErange`, `Region`.
-* **Abiertas ('Menciona'):** Lista respuestas.
+* **Abiertas ('Menciona'):** Lista respuestas (ID, Pregunta, Respuesta).
 * **Ponderador (Numérica):** Compara suma `Ponderador` vs total filas.
 * **Suma Ponderador por demográfico:** Suma `Ponderador` por `NSE`, `gender`, `AGErange`, `Region` y muestra porcentajes.
 * **Volumetría (Numérica):** Valida columnas contra umbrales definidos por país.
 * **Duplicados en IDs:** Verifica que `Unico` (Num) y `[auth]` (Txt) no tengan valores repetidos.
 * **Duplicados [panelistid]:** Reporta (Info) `[panelistid]` (Txt) duplicados y su conteo.
+* **Conteo de Demográficos:** Reporta (Info) conteo y % de `gender`, `AGErange`, `NSE` y `Region`.
 """)
 st.divider()
 
 # --- CONFIGURACIÓN DE REGLAS ---
 CLASIFICACIONES_POR_PAIS = {
-    'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Guacala', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
+    # --- AJUSTE 1: 'Guacala' -> 'Gualaca' ---
+    'Panamá': {'Centro': ['Aguadulce', 'Antón', 'La Pintada', 'Natá', 'Olá', 'Penonomé','Chagres', 'Ciudad de Colón', 'Colón', 'Donoso', 'Portobelo','Resto del Distrito', 'Santa Isabel', 'La Chorrera', 'Arraiján','Capira', 'Chame', 'San Carlos'],'Metro': ['Panamá', 'San Miguelito', 'Balboa', 'Chepo', 'Chimán', 'Taboga', 'Chepigana', 'Pinogana'],'Oeste': ['Alanje', 'Barú', 'Boquerón', 'Boquete', 'Bugaba', 'David', 'Dolega', 'Gualaca', 'Remedios', 'Renacimiento', 'San Félix', 'San Lorenzo', 'Tolé', 'Bocas del Toro', 'Changuinola', 'Chiriquí Grande', 'Chitré', 'Las Minas', 'Los Pozos', 'Ocú', 'Parita', 'Pesé', 'Santa María', 'Guararé', 'Las Tablas', 'Los Santos', 'Macaracas', 'Pedasí', 'Pocrí', 'Tonosí', 'Atalaya', 'Calobre', 'Cañazas', 'La Mesa', 'Las Palmas', 'Mariato', 'Montijo', 'Río de Jesús', 'San Francisco', 'Santa Fé', 'Santiago', 'Soná']},
     'México': {'Central/Bajío': ['CDMX + AM', 'Estado de México', 'Guanajuato', 'Hidalgo','Morelos', 'Puebla', 'Querétaro', 'Tlaxcala'],'Norte': ['Baja California Norte', 'Baja California Sur', 'Chihuahua', 'Coahuila','Durango', 'Nuevo León', 'Sinaloa', 'Sonora', 'Tamaulipas'],'Occidente/Pacifico': ['Aguascalientes', 'Colima', 'Guerrero', 'Jalisco', 'Michoacan','Nayarit', 'San Luis Potosi', 'Zacatecas'],'Sureste': ['Campeche', 'Chiapas', 'Oaxaca', 'Quintana Roo', 'Tabasco','Veracruz', 'Yucatán']},
     'Colombia': {'Andes': ['Antioquia', 'Caldas', 'Quindio', 'Risaralda', 'Santander'],'Centro': ['Bogotá', 'Boyacá', 'Casanare', 'Cundinamarca'],'Norte': ['Atlántico', 'Bolívar', 'Cesar', 'Córdoba', 'La Guajira', 'Magdalena', 'Norte de Santader', 'Sucre'], 'Sur': ['Cauca', 'Huila', 'Meta', 'Nariño', 'Tolima', 'Valle de Cauca']},
-    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungahua']},
+    # --- AJUSTE 2: 'Tungahua' -> 'Tungurahua' ---
+    'Ecuador': {'Costa': ['El Oro', 'Esmeraldas', 'Los Ríos', 'Manabí', 'Santa Elena', 'Santo Domingo de los Tsáchilas'],'Guayaquil': ['Guayas'],'Quito': ['Pichincha'],'Sierra': ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura', 'Loja', 'Tungurahua']},
     
     # (v2.28 - Ica y Huánuco a Centro)
     'Perú': {
@@ -560,6 +563,8 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
     st.divider()
     pais_clave_interna = pais_seleccionado_display
     validation_results = []
+    # --- AJUSTE 4: Inicializar DF para descarga de abiertas ---
+    df_para_descarga_abiertas = pd.DataFrame()
 
     try:
         # Leer archivos
@@ -1042,9 +1047,15 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
                     content_v8 = f"<span class='status-info-inline'>[INFO]</span> Se encontraron {total_p} columnas 'menciona' en el original, pero no hay respuestas abiertas válidas después del filtrado/renombrado."
                 else:
                     total_r = len(final_abiertas); content_v8 += f"<span class='status-info-inline'>[REPORTE]</span> <b>{total_p}</b> cols 'menciona' encontradas en original, <b>{total_r}</b> respuestas abiertas no vacías.<br><br>";
-                    df_disp = final_abiertas[[id_auth, 'Respuesta']]
+                    
+                    # --- AJUSTE 4: Preparar datos para descarga ---
+                    df_para_descarga_abiertas = final_abiertas[[id_auth, 'Pregunta_Std', 'Respuesta']].copy()
+                    df_para_descarga_abiertas.columns = ['ID', 'Pregunta', 'Respuesta']
+                    
+                    # --- AJUSTE 4: Mostrar Pregunta en reporte V8 ---
+                    df_disp = final_abiertas[[id_auth, 'Pregunta_Std', 'Respuesta']]
                     if total_r > 500: content_v8 += f"(Se muestran las primeras 500)<br>"; df_disp = df_disp.head(500)
-                    df_disp.columns = [id_auth, 'Respuesta'] # Renombrar para display
+                    df_disp.columns = [id_auth, 'Pregunta', 'Respuesta'] # Renombrar para display
                     content_v8 += df_disp.to_html(classes='df-style', index=False)
             else:
                 content_v8 = f"<span class'status-info-inline'>[INFO]</span> Se encontraron {total_p} columnas 'menciona' en el original, pero ninguna existe o está mapeada correctamente en el archivo procesado."
@@ -1326,12 +1337,68 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
          content_v13 = f"<span class='status-error-inline'>[ERROR inesperado V13]</span> {e_v1ag_gen}"
 
     validation_results.append({'key': key_v13, 'status': status_v13, 'content': content_v13})
+    
+    
+    # --- AJUSTE 3: NUEVA VALIDACIÓN V14 ---
+    key_v14 = "Conteo de Demográficos"; content_v14 = ""; status_v14 = "Info"
+    cols_v14 = ['gender', 'AGErange', 'NSE', 'Region']
+    cols_encontradas_v14 = []
+    
+    try:
+        for col in cols_v14:
+            if col in df_numerico_renamed.columns: # Usar df_numerico_renamed para conteo total
+                cols_encontradas_v14.append(col)
+                content_v14 += f"<h3 class='sub-heading'>{col}</h3>"
+                
+                counts = df_numerico_renamed[col].fillna('VACÍO/NULO').value_counts().reset_index()
+                counts.columns = ['Categoría', 'Total']
+                total_general = counts['Total'].sum()
+                
+                if total_general > 0:
+                    counts['Porcentaje'] = (counts['Total'] / total_general * 100).apply(lambda x: f"{x:.1f}%")
+                else:
+                    counts['Porcentaje'] = "0.0%"
+                    
+                counts['Total'] = counts['Total'].apply(lambda x: f"{x:,}") # Formatear con comas
+                content_v14 += counts.to_html(classes='df-style', index=False)
+                
+            else:
+                content_v14 += f"<h3 class='sub-heading'>{col}</h3>"
+                content_v14 += f"<span class='status-error-inline'>[ERROR]</span> Columna '{col}' no encontrada en base numérica (después de renombrar).<br>"
+                if status_v14 != "Error": status_v14 = "Error"
+        
+        if not cols_encontradas_v14:
+             content_v14 = "<span class='status-error-inline'>[ERROR]</span> Ninguna de las columnas demográficas requeridas fue encontrada."
+             status_v14 = "Error"
+             
+    except Exception as e_v14:
+        status_v14 = "Error"
+        content_v14 = f"<span class='status-error-inline'>[ERROR inesperado V14]</span> {e_v14}"
 
+    validation_results.append({'key': key_v14, 'status': status_v14, 'content': content_v14})
+    # --- FIN AJUSTE 3 ---
 
 
     # --- FIN VALIDACIONES ---
 
     st.success("Proceso de validación terminado.")
+    
+    # --- AJUSTE 4: Botón de descarga para Abiertas ---
+    st.markdown("### 🔽 Descargar Reporte de Abiertas")
+    if not df_para_descarga_abiertas.empty:
+        excel_abiertas = to_excel(df_para_descarga_abiertas)
+        st.download_button(
+            label="Descargar Abiertas (ID, Pregunta, Respuesta) (.xlsx)",
+            data=excel_abiertas,
+            file_name=f'reporte_abiertas_{pais_seleccionado_display}.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            key='dl_abiertas'
+        )
+    else:
+        st.info("No se encontraron respuestas abiertas para descargar (o la V8 falló).")
+    # --- FIN AJUSTE 4 ---
+    
+    
     st.divider()
 
     # --- ÁREA DE REPORTE ESTILIZADO ---
@@ -1380,9 +1447,11 @@ if uploaded_file_num is not None and uploaded_file_txt is not None:
         status_class = f"status-{v['status'].lower()}"
         content_detalle = v['content']
         # --- CORRECCIÓN v2.24: Usar v['title'] para la comprobación ---
-        if 'title' in v and "Agrupaciones" in v['title']:
+        # --- MODIFICADO v2.30: Añadir V14 (Conteo) a la lógica de sub-heading ---
+        if 'title' in v and ("Agrupaciones" in v['title'] or "Conteo de Demográficos" in v['title']):
              content_detalle = content_detalle.replace("<h3>5.1:", "<h3 class='sub-heading'>5.1:").replace("<h3>5.2:", "<h3 class='sub-heading'>5.2:").replace("<h3>5.3:", "<h3 class='sub-heading'>5.3:").replace("<h3>5.4:", "<h3 class'sub-heading'>5.4:")
-        # --- FIN CORRECCIÓN v2.24 ---
+        # --- FIN CORRECCIÓN/MODIFICACIÓN ---
+        
         # Reemplazar <br> y \n para seguridad HTML
         safe_content = str(content_detalle).replace('<br>', '<br/>').replace('\n', '') # Asegurar que sea string
         # Eliminar posible doble <br/> si ya existe
